@@ -189,9 +189,8 @@ class TrueCont (object):
         return str(path)
 
 if __name__ == "__main__":
-    path = "/home/dax/julekatze.tc"
-    path2 = "/home/dax/julekatze2.tc"
-    target = "/home/dax/tmp/tc"
+    path = "test.tc"
+    target = "/tmp/tc"
     password = "test"
     size = "10M"
     voltype = "normal"
