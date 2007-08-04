@@ -40,9 +40,9 @@ class TrueCrypt (object):
     def create(self, path, password, voltype, size, fs, ha, ea):
         """
         Create a TrueCont Object and let it create a real TrueCrypt-Container
-        voltype Normal or Hidden
+        voltype normal or hidden
         size    in bytes or like "10M", look in TrueCrypts Manpage!
-        fs  Fat32 or None :: I will implement ext3 as soon as possible
+        fs  fat or none # I will implement ext3 as soon as possible
         ha  Hash algorithm 
         ea  Encryption algorithm
 
@@ -90,33 +90,39 @@ class TrueCont (object):
         self._status = self.frstStatus()
         self._error = ""
 
-    def create(self,voltype, size, fs, ha, ea):
+    def create(self,voltype, size, fs, ha, ea, sudo_passwd=None):
         """
-        voltype Normal or Hidden
+        voltype normal or hidden
         size    in bytes or like "10M", look in TrueCrypts Manpage!
-        fs  fat or None :: I will implement ext3 as soon as possible
+        fs  fat or none # I will implement ext3 as soon as possible
         ha  Hash algorithm 
         ea  Encryption algorithm
         """
-        assert voltype in ["Normal", "Hidden"], "Voltype must be of 'Normal' or 'Hidden'"
-        assert fs in ["fat", "None"], "Filesystem must be of 'fat' or 'None'"
+        assert voltype in ["normal", "hidden"], "Voltype must be of 'normal' or 'hidden'"
+        assert fs in ["fat", "none"], "Filesystem must be of 'fat' or 'none'"
         import string
         from random import choice
-        self.size = size
-        # Create a file in /tmp with 320 random ASCI Chars to give truecrypt random input
+        # Create a file in /tmp with 320 random ASCI chars to give truecrypt random input
         chars = string.letters + string.digits
         random = "".join([choice(chars) for c in xrange(320)])
         randfilename = "/tmp/randfile"
-        if os.path.isfile(randfilename): os.remove(randfilename) # Delte any previous Randfiles
+        if os.path.isfile(randfilename): os.remove(randfilename) # Delte any previous randfiles
         randfile = file(randfilename, "w")
         randfile.write(random)
         randfile.close()
         # File created
+        self.size = size
         command = "truecrypt -u -p %s  --size %s --type %s --encryption %s --hash %s --filesystem %s --keyfile '' --overwrite --random-source %s -c %s" % (self.password, self.size, voltype, ea, ha, fs, randfilename, self.path)
+        if sudo_passwd:
+            command = str("echo %s | sudo -S " % sudo_passwd) + command
+        else:
+            command = "sudo " + command
         input, result, errors = os.popen3(command)
         error = errors.readlines()
         if len(error) < 1:
             self._status = "unmounted"
+        elif error[0] == 'Password:':
+            self._status == "wrongpass"
         else:
             self._status = error
         os.remove(randfilename) # Remove the random-file
@@ -206,8 +212,8 @@ if __name__ == "__main__":
     ha = "SHA-1"
     ea = "AES"
     fs = "fat"
-    sudo = "foobar"
+    sudo = ""
 
     t = TrueCrypt()
-    t.open(path, password)
+    t.create(path, password, voltype, size, fs, ha, ea)
     print t.getList()
