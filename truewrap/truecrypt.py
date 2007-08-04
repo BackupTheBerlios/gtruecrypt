@@ -61,7 +61,8 @@ class TrueCrypt (object):
         cnt = 0
         for c in self._containers:
             cnt += 1
-            list += [(cnt , c.repr())]
+            cont = iter(c) # Iterate through containers atributes
+            list += [(cnt, cont.next(), cont.next(), cont.next())]
         return list
 
     def mount(self, num, target, mount_options=None):
@@ -93,10 +94,12 @@ class TrueCont (object):
         """
         voltype Normal or Hidden
         size    in bytes or like "10M", look in TrueCrypts Manpage!
-        fs  Fat32 or None :: I will implement ext3 as soon as possible
+        fs  fat or None :: I will implement ext3 as soon as possible
         ha  Hash algorithm 
         ea  Encryption algorithm
         """
+        assert voltype in ["Normal", "Hidden"], "Voltype must be of 'Normal' or 'Hidden'"
+        assert fs in ["fat", "None"], "Filesystem must be of 'fat' or 'None'"
         import string
         from random import choice
         self.size = size
@@ -178,8 +181,10 @@ class TrueCont (object):
         else:
             return 0
 
-    def repr(self):
-        return (self.path, self.target, self._status)
+    def __iter__(self):
+        yield self.path
+        yield self.target
+        yield self._status
 
     def __str__(self):
         """
@@ -203,9 +208,6 @@ if __name__ == "__main__":
     fs = "fat"
     sudo = "foobar"
 
-    t = TrueCrypt(sudo)
+    t = TrueCrypt()
     t.open(path, password)
-    t.mount(0, target)
-    print t.getList()
-    t.close(0)
     print t.getList()
