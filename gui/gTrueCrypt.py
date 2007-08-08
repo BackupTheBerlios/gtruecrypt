@@ -21,11 +21,17 @@
 #  GNU General Public License for more details.
 #
 
+# Wo holst du das TrueCrypt-Passwort her?
+# Das musst du meinem Objekt bitteschoen auch uebergeben ;)
+# Ausserdem hab ich dir ein paar FIXME's dazu geschrieben, schau dir die mal an.
+# im uebrigen..warum importierst du pygtk, wenn du es kein einziges mal aufrust?
+# Und: Vergiss nicht, der TrueCrypt Klasse ein sudo_password zu übergeben und das vorher abzurufen.
+
 import pygtk
 pygtk.require('2.0')
 import gtk
-"""importing classes from the TrueCrypt-Wrapper from Jens Kaldenbach"""
-from tcw import *
+"""importing classes from the TrueCrypt-Wrapper from Jens Kadenbach"""
+from truecrypt import *
 """This class includes all stuff to create and manage the main window"""
 class main_window:
 	"""creates a new window and sets its properties"""
@@ -43,7 +49,7 @@ class main_window:
 		self.container = gtk.TreeViewColumn('Container')
 		self.target = gtk.TreeViewColumn('Mountpoint')
 		self.state = gtk.TreeViewColumn('State')
-		self.TC = TrueCrypt("ME182BT")
+		self.TC = TrueCrypt() # FIXME sudo password???
 		container = self.TC.getList()
 		for c in container:
 			container_list = [c[1][0], c[1][1], c[1][2], "True"]
@@ -64,7 +70,7 @@ class main_window:
 		#    self.container.set_cell_data_func(self.cellpb, self.make_pb)
 		#else:
 		#	self.container.set_attributes(self.cellpb, stock_id=1)
-		self.button = gtk.Button("action")#Has to be renamed automaticly on changing cont.-state (,ount/eject/details)
+		self.button = gtk.Button("action")#Has to be renamed automaticly on changing cont.-state (mount/eject/details)
 		self.button.show()
 		self.container.set_attributes(self.cellpb, text=0)
 		self.target.set_attributes(self.cell1, text=1)
@@ -88,10 +94,13 @@ class main_window:
 			target = self.liststore.get(iter, 1)
 			if state[0] == "unmounted":
 				self.liststore.set(iter, 2, "mounted")
-				print self.TC.mount(0, target[0])
+				print self.TC.mount(0, target[0]) # FIXME We need to pass the truecrypt password!!!
+                # needings something like "self.button.setText("mounted")"
 			elif state[0] == "mounted":
 				self.liststore.set(iter, 2, "unmounted")
-				
+				# FIXME Call the self.TC.close() function!!!
+                # same as above, we need to change the button text
+
 		return
 	"""funktion for closing gTC"""
 	def delete_event(self, widget, event, data=None):
