@@ -158,9 +158,8 @@ containers: []\
             return 0
         else:
             return 1
-        
 
-    def open(self, path, password=None, target=None):
+    def open(self, path, password, target=None):
         if not self.isDouble(path):
            cont = TrueCont(path, password, target)
            self._containers += [cont]
