@@ -35,7 +35,8 @@ class TrueCrypt (object):
         self.__version__ = "0.2-alpha"
         self.__pref_path = self.loadPrefPath(preferences)
         self.__pref = self.loadPreferences()
-        self._containers = self.loadContainers()
+        self._containers = []
+        self.loadContainers()
 
     def loadPreferences(self):
         """Load the preferences or create a new default file"""
@@ -55,7 +56,7 @@ class TrueCrypt (object):
         for c in containers:
             path = c['path']
             targ = c['target']
-            list += [TrueCont(path, self.__sudo_passwd, target)]
+            self.open(path, target=targ)
         return list
 
     def addtoyaml(self, num):
@@ -118,11 +119,12 @@ containers: []\
 
         returns __str__ of TrueCont Object
         """
-        cont = TrueCont(path, password)
-        cont.create(voltype, size, fs, ha, ea, self.__sudo_passwd)
-        self._containers += [cont]
-        self.addtoyaml(self._containers.index(cont))
-        return str(cont)
+        if not self.isDouble(path):
+            cont = TrueCont(path, password)
+            cont.create(voltype, size, fs, ha, ea, self.__sudo_passwd)
+            self._containers += [cont]
+            self.addtoyaml(self._containers.index(cont))
+            return str(cont)
 
     def getList(self):
         """
@@ -148,9 +150,21 @@ containers: []\
     def close(self, num):
         return self._containers[num].close(self.__sudo_passwd)
 
+    def isDouble(self, path):
+        paths = set()
+        for c in self._containers:
+            paths.add(c.path)
+        if path not in paths:
+            return 0
+        else:
+            return 1
+        
+
     def open(self, path, password=None, target=None):
-        self._containers += [TrueCont(path, password, target)]
-        return 
+        if not self.isDouble(path):
+           cont = TrueCont(path, password, target)
+           self._containers += [cont]
+           self.addtoyaml(self._containers.index(cont))
 
 
 class TrueCont (object):
@@ -286,6 +300,6 @@ if __name__ == "__main__":
     sudo = "jul3chen"
 
     t = TrueCrypt(sudo)
-    t.create(path, password, voltype, size, fs, ha, ea)
+#    t.create(path, password, voltype, size, fs, ha, ea)
     print t.getList()
     t.save()
