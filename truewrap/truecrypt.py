@@ -24,8 +24,8 @@ import os
 import sys
 import yaml
 
-#FIXME USE YAML INSTEAD OF FUCKING XML!
-__version__ = "0.2-alpha"
+#TODO
+# Add more filesystems for creation
 
 class TrueCrypt (object):
     """Wrapper class to access TrueCrypt functions and to store and load options"""
@@ -216,9 +216,9 @@ class TrueCont (object):
         return result.readlines()
 
     def frstStatus(self):
-        if os.path.isfile(self.path) and password:
+        if os.path.isfile(self.path) and self.password:
             return "unmounted"
-        elif not password:
+        elif not self.password:
             return "nopass"
         elif not os.path.isfile(self.path):
             return "notfound"
