@@ -22,15 +22,85 @@
 
 import os
 import sys
+import yaml
 
+#FIXME USE YAML INSTEAD OF FUCKING XML!
 __version__ = "0.2-alpha"
 
 class TrueCrypt (object):
-    """Wrapper class to access TrueCrypt functions"""
-    def __init__(self, sudo_passwd=None):
+    """Wrapper class to access TrueCrypt functions and to store and load options"""
+    def __init__(self, sudo_passwd=None, preferences=None):
         """_containers is a list of TrueCont Objects"""
-        self._containers = []
         self.__sudo_passwd = sudo_passwd
+        self.__version__ = "0.2-alpha"
+        self.__pref_path = self.loadPrefPath(preferences)
+        self.__pref = self.loadPreferences()
+        self._containers = self.loadContainers()
+
+    def loadPreferences(self):
+        """Load the preferences or create a new default file"""
+        try:
+            f = file(self.__pref_path)
+            data = yaml.safe_load(f)
+        except IOError:
+            return self.exceptFunc()
+        return data
+
+    def loadContainers(self):
+        """Load the containers described in the yaml document self.__pref"""
+        list = []
+        containers = self.__pref['containers']
+        if not containers:
+            return list
+        for c in containers:
+            path = c['path']
+            targ = c['target']
+            list += [TrueCont(path, self.__sudo_passwd, target)]
+        return list
+
+    def addtoyaml(self, num):
+        """Add to the options"""
+        c = iter(self._containers[num])
+        path = c.next()
+        target = c.next()
+        containers = self.__pref['containers']
+        containers.append({'path': path, 'target': target})
+
+    def save(self):
+        """Refresh and save the prefences"""
+        
+        f = file(self.__pref_path, 'w')
+        f.write(yaml.dump(self.__pref))
+        f.close()
+
+    def umountall(self):
+        for c in self.getList():
+            self.close(c[0])
+
+    def exit(self):
+        self.save()
+        self.umountall()
+
+    def exceptFunc(self):
+        """Create a default config"""
+        default="""\
+containers: []\
+""" 
+        yamlfile = file(self.__pref_path, 'w')
+        yamlfile.write(default)
+        yamlfile.close()
+        yamlfile = file(self.__pref_path, 'r')
+        return yaml.safe_load(yamlfile)
+
+    def loadPrefPath(self, preferences=None):
+        if not preferences:
+            path = os.environ['HOME'] + "/.gtruecrypt"
+            if not os.path.isdir(path):
+                os.makedirs(path)
+            path += "/saved_containers"
+            return path
+        else:
+            return preferences
 
     def getMapped(self):
         """Will Return a nice Tuple of mapped TrueCrypt objects"""
@@ -39,9 +109,9 @@ class TrueCrypt (object):
 
     def create(self, path, password, voltype, size, fs, ha, ea):
         """
-        Create a TrueCont Object and let it create a real TrueCrypt-Container
+        Create a TrueCont Object and let it create a real TrueCrypt-container
         voltype normal or hidden
-        size    in bytes or like "10M", look in TrueCrypts Manpage!
+        size    in bytes or like "10M", look in TrueCrypts manpage!
         fs  fat or none # I will implement ext3 as soon as possible
         ha  Hash algorithm 
         ea  Encryption algorithm
@@ -51,6 +121,7 @@ class TrueCrypt (object):
         cont = TrueCont(path, password)
         cont.create(voltype, size, fs, ha, ea, self.__sudo_passwd)
         self._containers += [cont]
+        self.addtoyaml(self._containers.index(cont))
         return str(cont)
 
     def getList(self):
@@ -62,7 +133,7 @@ class TrueCrypt (object):
         for c in self._containers:
             cnt += 1
             cont = iter(c) # Iterate through containers atributes
-            list += [(cnt, cont.next(), cont.next(), cont.next())]
+            list += [(cnt, (cont.next(), cont.next(), cont.next()))]
         return list
 
     def mount(self, num, target, mount_options=None):
@@ -102,6 +173,7 @@ class TrueCont (object):
         assert fs in ["fat", "none"], "Filesystem must be of 'fat' or 'none'"
         import string
         from random import choice
+
         # Create a file in /tmp with 320 random ASCI chars to give truecrypt random input
         chars = string.letters + string.digits
         random = "".join([choice(chars) for c in xrange(320)])
@@ -111,6 +183,7 @@ class TrueCont (object):
         randfile.write(random)
         randfile.close()
         # File created
+        
         self.size = size
         command = "truecrypt -u -p %s  --size %s --type %s --encryption %s --hash %s --filesystem %s --keyfile '' --overwrite --random-source %s -c %s" % (self.password, self.size, voltype, ea, ha, fs, randfilename, self.path)
         if sudo_passwd:
@@ -162,7 +235,6 @@ class TrueCont (object):
         elif 'truecrypt: Volume already mapped\n' in error:
             self._status = "mounted"
         else:
-            print error
             self._error = error
         return error
 
@@ -178,7 +250,6 @@ class TrueCont (object):
                 command = "sudo " + command
             input, result, errors = os.popen3(command)
             error = errors.readlines()
-            print error
             if len(error) < 1:
                 self._status == "unmounted"
             else:
@@ -204,16 +275,17 @@ class TrueCont (object):
         return str(path)
 
 if __name__ == "__main__":
-    path = "test.tc"
-    target = "/tmp/tc"
+    path = "/home/dax/test2.tc"
+    target = "/tmp/tc2"
     password = "test"
     size = "10M"
     voltype = "normal"
     ha = "SHA-1"
     ea = "AES"
     fs = "fat"
-    sudo = ""
+    sudo = "jul3chen"
 
-    t = TrueCrypt()
+    t = TrueCrypt(sudo)
     t.create(path, password, voltype, size, fs, ha, ea)
     print t.getList()
+    t.save()
