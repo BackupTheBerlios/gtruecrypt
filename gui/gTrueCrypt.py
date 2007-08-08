@@ -25,7 +25,7 @@
 # Das musst du meinem Objekt bitteschoen auch uebergeben ;)
 # Ausserdem hab ich dir ein paar FIXME's dazu geschrieben, schau dir die mal an.
 # im uebrigen..warum importierst du pygtk, wenn du es kein einziges mal aufrust?
-# Und: Vergiss nicht, der TrueCrypt Klasse ein sudo_password zu übergeben und das vorher abzurufen.
+# Und: Vergiss nicht, der TrueCrypt Klasse ein sudo_password zu uebergeben und das vorher abzurufen.
 
 import pygtk
 pygtk.require('2.0')
