@@ -138,17 +138,18 @@ containers: []\
             list += [(cnt, (cont.next(), cont.next(), cont.next()))]
         return list
 
-    def mount(self, num, target, mount_options=None):
+    def mount(self, num, target, password=None, mount_options=None):
         """
         mount the TrueCont to given target
 
         num (int) - Number of a TrueCont Object in the self._containers list
         target (str) - Target directory
         """
-        return self._containers[num].open(target, mount_options, self.__sudo_passwd)    
+        return self._containers[num].open(password, target, mount_options, self.__sudo_passwd)    
 
     def close(self, num):
-        return self._containers[num].close(self.__sudo_passwd)
+        self._containers[num].close(self.__sudo_passwd)
+        del self._containers[num]
 
     def isDouble(self, path):
         paths = set()
@@ -159,7 +160,7 @@ containers: []\
         else:
             return 1
 
-    def open(self, path, password, target=None):
+    def open(self, path, password=None, target=None):
         if not self.isDouble(path):
            cont = TrueCont(path, password, target)
            self._containers += [cont]
@@ -224,10 +225,11 @@ class TrueCont (object):
         else:
             return "error"
 
-    def open(self, target=None, mount_options=None, sudo_passwd=None):
+    def open(self, password=None, target=None, mount_options=None, sudo_passwd=None):
         """
         Mounts the Container to <target> and will create the target directory if able
         """
+        if password: self.password = password
         if target: self.target = target
         if not os.path.isdir(self.target):
             try:
