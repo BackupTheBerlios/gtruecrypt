@@ -21,16 +21,12 @@
 
 
 import os
-import sys
 import yaml
 import tcerr
 import tcresponse as response
 import pexpect
 
-#TODO
-# Use pexpect to get much more robust!
-#
-# Add more filesystems for creation
+#TODO Add more filesystems for creation
 
 class TrueCrypt (object):
     """Wrapper class to access TrueCrypt functions and to store and load options"""
