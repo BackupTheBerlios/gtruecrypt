@@ -229,7 +229,7 @@ class TrueCont (object):
         child = pexpect.spawn(command)
         create_sudo(self, child) 
 
-    def frstStatus(self):
+    def frstStatus(self): # TODO implement searching if it is mounted
         if os.path.isfile(self.path):
             return tcerr.umounted
         elif not os.path.isfile(self.path):
@@ -264,7 +264,7 @@ class TrueCont (object):
             res = child.expect([response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, response.VOLUME_MOUNTED, pexpect.EOF, response.ALREADY_MAPPED], timeout=200)
             if res == 0:
                 child.sendline(sudo_passwd)
-                self.mount_sudo(child)
+                return self.mount_sudo(child)
             elif res == 1:
                 self._error = tcerr.missing_sudo
                 child.kill(9)
@@ -289,9 +289,6 @@ class TrueCont (object):
         """
         Unmounts the Container
         """
-        if self._status != tcerr.mounted:
-            return True
-        command = "sudo truecrypt -d %s" % self.path
         def close_sudo(self, child):
             """packed into a function because we maybe need to call it again and again..."""
             res = child.expect([response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, response.DISMOUNTING_SUCCESSFULL, pexpect.EOF], timeout=200)
@@ -303,7 +300,7 @@ class TrueCont (object):
                 child.kill(9)
                 return self._error
             elif res == 2 or res == 3:
-                self._status = tcerr.umounted # FIXME NOT WORKING
+                self._status = tcerr.umounted
                 return self._status
             else:
                 print "DEBUGGING INFORMATION"
@@ -311,6 +308,7 @@ class TrueCont (object):
                 print child
                 child.kill(9)
                 return tcerr.unknown_error
+        command = "sudo truecrypt -d %s" % self.path
         child = pexpect.spawn(command)
         close_sudo(self, child)
 
@@ -342,10 +340,9 @@ if __name__ == "__main__":
     sudo = "blub"
 
     t = TrueCrypt(sudo)
-#    t.open(path, passwd, target)
     print t.getList()
-    t.mount(0, target,  passwd)
+    t.mount(0, target, passwd)
     print t.getList()
-    print t.umountall()
+    t.close(0)
     print t.getList()
     t.save()

@@ -14,7 +14,7 @@ ENTER_MOUNTPATH= ".*Enter mount.*"
 ADMIN_RIGHTS_REQUIRED= ".*Administrator.*root.*privileges.*"
 
 MOUNTING_SUCCESSFULL = "Mapped.*as.*\n.*Mounted.*at.*"
-DISMOUNTING_SUCCESSFULL = ""
+DISMOUNTING_SUCCESSFULL = ".*not mounted*"
 
 INCORRECT_VOLUME= ".*Incorrect password or not a TrueCrypt volume.*"
 NOT_A_DIRECTORY= ".*Cannot open file or device: Not a directory.*"
