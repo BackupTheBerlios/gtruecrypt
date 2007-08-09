@@ -24,6 +24,8 @@ import os
 import sys
 import yaml
 import tcerr
+import tcresponse as response
+import pexpect
 
 #TODO
 # Use pexpect to get much more robust!
@@ -68,7 +70,9 @@ class TrueCrypt (object):
         path = c.next()
         target = c.next()
         containers = self.__pref['containers']
-        containers.append({'path': path, 'target': target})
+        dict = {'path': path, 'target': target}
+        if dict in containers: return False # Dont write in in twice!
+        containers.append(dict)
 
     def save(self):
         """Refresh and save the prefences"""
@@ -134,14 +138,14 @@ containers: []\
         Returns a list of tuples with (Number of container, (path, target, status))
         """
         list = []
-        cnt = 0
+        cnt = -1
         for c in self._containers:
             cnt += 1
             cont = iter(c) # Iterate through containers atributes
             list += [(cnt, (cont.next(), cont.next(), cont.next()))]
         return list
 
-    def mount(self, num, target, password=None, mount_options=None):
+    def mount(self, num, target=None, password=None, mount_options=None):
         """
         mount the TrueCont to given target
 
@@ -152,13 +156,13 @@ containers: []\
 
     def close(self, num):
         self._containers[num].close(self.__sudo_passwd)
-        del self._containers[num]
+#        del self._containers[num]
 
     def isDouble(self, path):
         paths = set()
         for c in self._containers:
             paths.add(c.path)
-        if path not in paths:
+        if not path in paths:
             return 0
         else:
             return 1
@@ -186,8 +190,10 @@ class TrueCont (object):
         ha  Hash algorithm 
         ea  Encryption algorithm
         """
-        assert voltype in ["normal", "hidden"], "Voltype must be of 'normal' or 'hidden'"
-        assert fs in ["fat", "none"], "Filesystem must be of 'fat' or 'none'"
+        if not voltype in ["normal", "hidden"]:
+            return tcerr.voltype
+        if not fs in ["fat", "none"]:
+            return tcerr.filesystem
         import string
         from random import choice
 
@@ -200,67 +206,95 @@ class TrueCont (object):
         randfile.write(random)
         randfile.close()
         # File created
-        
+        def create_sudo(self, child):
+            """packed into a function because we maybe need to call it again and again..."""
+            res = child.expect([response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, response.VOLUME_CREATED, response.EOF], timeout=200)
+            if res == 0:
+                child.sendline(sudo_passwd)
+                self.create(child)
+            elif res == 1:
+                os.remove(randfilename) # Remove the random-file
+                self._error = tcerr.missing_sudo
+                self._status = tcerr.missing_sudo
+                child.kill(9)
+                return self._error
+            elif res == 2 or res == 3:
+                os.remove(randfilename) # Remove the random-file
+                self._status = tcerr.umounted
+                return tcerr.created
+            else:
+                os.remove(randfilename) # Remove the random-file 
+                print "DEBUGGING INFORMATION"
+                print 
+                print child
+                return tcerr.unknown_error
+ 
         self.size = size
-        command = "truecrypt -u -p %s  --size %s --type %s --encryption %s --hash %s --filesystem %s --keyfile '' --overwrite --random-source %s -c %s" % (self.password, self.size, voltype, ea, ha, fs, randfilename, self.path)
-        if sudo_passwd:
-            command = str("echo %s | sudo -S " % sudo_passwd) + command
-        else:
-            command = "sudo " + command
-        input, result, errors = os.popen3(command)
-        error = errors.readlines()
-        if len(error) < 1:
-            self._status = "unmounted"
-        elif error[0] == 'Password:':
-            self._status == "wrongpass"
-        else:
-            self._status = error
-        os.remove(randfilename) # Remove the random-file
-        return result.readlines()
+        command = "sudo truecrypt -u -p %s  --size %s --type %s --encryption %s --hash %s --filesystem %s --keyfile '' --overwrite --random-source %s -c %s" % (self.password, self.size, voltype, ea, ha, fs, randfilename, self.path)
+        child = pexpect.spawn(command)
+        create_sudo(self, child) 
 
     def frstStatus(self):
         if os.path.isfile(self.path):
-            return "unmounted"
+            return tcerr.umounted
         elif not os.path.isfile(self.path):
-            return "notfound"
+            return tcerr.not_found
         else:
-            return "error"
+            return tcerr.unknown_error
 
     def open(self, password=None, target=None, mount_options=None, sudo_passwd=None):
         """
         Mounts the Container to <target> and will create the target directory if able
         """
-        if password: self.password = password
-        if not password: self.error = tcerr.missing_password
-        assert len(self.password) > 0 , "No password given to mount!" #FIXME raise an error of an own error class instead of this shit.
-        if target: self.target = target
+        if password:
+            self.password = password
+        if not self.password:
+            self._error = tcerr.missing_password
+            return self._error
+        if target:
+            self.target = target
+        if not self.target:
+            self._error = tcerr.no_target
+            return self._error
         if not os.path.isdir(self.target):
             try:
                 os.makedirs(self.target)
             except:
                 self._error = tcerr.cannot_create_dir
-                return 1
-        command = "truecrypt -u %s %s -p %s" % (self.path, target, self.password)
-        if sudo_passwd:
-            command = str("echo %s | sudo -S " % sudo_passwd) + command
-        else:
-            command = "sudo " + command
+                return self._error
+        command = "sudo  truecrypt -u %s %s -p %s" % (self.path, target, self.password)
         if mount_options: command.join("-M %s" % mount_options)
-        input, result, errors = os.popen3(command)
-        error = errors.readlines()
-        if len(error) < 1 or error[0] == 'Password:':
-            self._status = "mounted"
-        elif 'truecrypt: Volume already mapped\n' in error:
-            self._status = "mounted"
-        else:
-            self._error = error
-        return error
+        def mount_sudo(self, child):
+            """packed into a function because we maybe need to call it again and again..."""
+            res = child.expect([response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, response.VOLUME_MOUNTED, pexpect.EOF, response.ALREADY_MAPPED], timeout=200)
+            if res == 0:
+                child.sendline(sudo_passwd)
+                self.create(child)
+            elif res == 1:
+                self._error = tcerr.missing_sudo
+                child.kill(9)
+                return self._error
+            elif res == 2 or res == 3:
+                self._status = tcerr.mounted
+                return self._status
+            elif res == 4:
+                self._status = tcerr.allready_mounted
+                return self._status
+            else:
+                print "DEBUGGING INFORMATION"
+                print 
+                print child
+                child.kill(9)
+                return tcerr.unknown_error
 
-    def close(self, sudo_passwd=None):
+        child = pexpect.spawn(command)
+        mount_sudo(self, child)
+ 
+    def close(self, sudo_passwd=None): #FIXME pexpect!!!
         """
         Unmounts the Container
         """
-        if self._status == "mounted":
+        if self._status == tcerr.mounted:
             command = "truecrypt -d %s" % self.path
             if sudo_passwd:
                 command = command + "echo %s | sudo -s " % sudo_passwd
@@ -293,17 +327,21 @@ class TrueCont (object):
         return str(path)
 
 if __name__ == "__main__":
-    path = "/home/dax/test2.tc"
+    path = "/home/dax/test1.tc"
     target = "/tmp/tc2"
-    password = "test"
+    passwd = "test"
     size = "10M"
     voltype = "normal"
     ha = "SHA-1"
     ea = "AES"
     fs = "fat"
-    sudo = ""
+    sudo = "blub"
 
     t = TrueCrypt(sudo)
-#    t.create(path, password, voltype, size, fs, ha, ea)
+#    t.open(path, passwd, target)
+    print t.getList()
+    t.mount(0, target,  passwd)
+    print t.getList()
+    print    t.umountall()
     print t.getList()
     t.save()
