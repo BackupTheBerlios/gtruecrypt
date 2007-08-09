@@ -1,4 +1,5 @@
 # truecryptresponse from "forcefield" [ http://bockcay.de/forcefield ]
+# slightly changed
 
 
 import re
