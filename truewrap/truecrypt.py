@@ -207,7 +207,7 @@ class TrueCont (object):
             res = child.expect([response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, response.VOLUME_CREATED, response.EOF], timeout=200)
             if res == 0:
                 child.sendline(sudo_passwd)
-                self.create(child)
+                self.create_sudo(child)
             elif res == 1:
                 os.remove(randfilename) # Remove the random-file
                 self._error = tcerr.missing_sudo
@@ -265,7 +265,7 @@ class TrueCont (object):
             res = child.expect([response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, response.VOLUME_MOUNTED, pexpect.EOF, response.ALREADY_MAPPED], timeout=200)
             if res == 0:
                 child.sendline(sudo_passwd)
-                self.create(child)
+                self.mount_sudo(child)
             elif res == 1:
                 self._error = tcerr.missing_sudo
                 child.kill(9)
@@ -338,6 +338,6 @@ if __name__ == "__main__":
     print t.getList()
     t.mount(0, target,  passwd)
     print t.getList()
-    print    t.umountall()
-    print t.getList()
+    #print    t.umountall()
+    #print t.getList()
     t.save()
