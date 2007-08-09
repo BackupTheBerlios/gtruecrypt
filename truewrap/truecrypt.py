@@ -152,7 +152,6 @@ containers: []\
 
     def close(self, num):
         self._containers[num].close(self.__sudo_passwd)
-#        del self._containers[num]
 
     def isDouble(self, path):
         paths = set()
@@ -286,25 +285,34 @@ class TrueCont (object):
         child = pexpect.spawn(command)
         mount_sudo(self, child)
  
-    def close(self, sudo_passwd=None): #FIXME pexpect!!!
+    def close(self, sudo_passwd=None):
         """
         Unmounts the Container
         """
-        if self._status == tcerr.mounted:
-            command = "truecrypt -d %s" % self.path
-            if sudo_passwd:
-                command = command + "echo %s | sudo -s " % sudo_passwd
+        if self._status != tcerr.mounted:
+            return True
+        command = "sudo truecrypt -d %s" % self.path
+        def close_sudo(self, child):
+            """packed into a function because we maybe need to call it again and again..."""
+            res = child.expect([response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, response.DISMOUNTING_SUCCESSFULL, pexpect.EOF], timeout=200)
+            if res == 0:
+                child.sendline(sudo_passwd)
+                self.close_sudo(child)
+            elif res == 1:
+                self._error = tcerr.missing_sudo
+                child.kill(9)
+                return self._error
+            elif res == 2 or res == 3:
+                self._status = tcerr.umounted
+                return self._status
             else:
-                command = "sudo " + command
-            input, result, errors = os.popen3(command)
-            error = errors.readlines()
-            if len(error) < 1:
-                self._status == "unmounted"
-            else:
-                self._error = error
-            return result
-        else:
-            return 0
+                print "DEBUGGING INFORMATION"
+                print 
+                print child
+                child.kill(9)
+                return tcerr.unknown_error
+        child = pexpect.spawn(command)
+        close_sudo(self, child)
 
     def __iter__(self):
         yield self.path
@@ -338,6 +346,6 @@ if __name__ == "__main__":
     print t.getList()
     t.mount(0, target,  passwd)
     print t.getList()
-    #print    t.umountall()
-    #print t.getList()
+    print t.close(0)
+    print t.getList()
     t.save()
