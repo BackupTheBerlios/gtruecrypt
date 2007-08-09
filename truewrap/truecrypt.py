@@ -297,13 +297,13 @@ class TrueCont (object):
             res = child.expect([response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, response.DISMOUNTING_SUCCESSFULL, pexpect.EOF], timeout=200)
             if res == 0:
                 child.sendline(sudo_passwd)
-                self.close_sudo(child)
+                return self.close_sudo(child)
             elif res == 1:
                 self._error = tcerr.missing_sudo
                 child.kill(9)
                 return self._error
             elif res == 2 or res == 3:
-                self._status = tcerr.umounted
+                self._status = tcerr.umounted # FIXME NOT WORKING
                 return self._status
             else:
                 print "DEBUGGING INFORMATION"
@@ -346,6 +346,6 @@ if __name__ == "__main__":
     print t.getList()
     t.mount(0, target,  passwd)
     print t.getList()
-    print t.close(0)
+    print t.umountall()
     print t.getList()
     t.save()
