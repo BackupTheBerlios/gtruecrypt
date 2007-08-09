@@ -23,8 +23,11 @@
 import os
 import sys
 import yaml
+import tcerr
 
 #TODO
+# Use pexpect to get much more robust!
+#
 # Add more filesystems for creation
 
 class TrueCrypt (object):
@@ -216,10 +219,8 @@ class TrueCont (object):
         return result.readlines()
 
     def frstStatus(self):
-        if os.path.isfile(self.path) and self.password:
+        if os.path.isfile(self.path):
             return "unmounted"
-        elif not self.password:
-            return "nopass"
         elif not os.path.isfile(self.path):
             return "notfound"
         else:
@@ -230,12 +231,14 @@ class TrueCont (object):
         Mounts the Container to <target> and will create the target directory if able
         """
         if password: self.password = password
+        if not password: self.error = tcerr.missing_password
+        assert len(self.password) > 0 , "No password given to mount!" #FIXME raise an error of an own error class instead of this shit.
         if target: self.target = target
         if not os.path.isdir(self.target):
             try:
                 os.makedirs(self.target)
             except:
-                self._error = "cannot create dir"
+                self._error = tcerr.cannot_create_dir
                 return 1
         command = "truecrypt -u %s %s -p %s" % (self.path, target, self.password)
         if sudo_passwd:
@@ -298,7 +301,7 @@ if __name__ == "__main__":
     ha = "SHA-1"
     ea = "AES"
     fs = "fat"
-    sudo = "jul3chen"
+    sudo = ""
 
     t = TrueCrypt(sudo)
 #    t.create(path, password, voltype, size, fs, ha, ea)
