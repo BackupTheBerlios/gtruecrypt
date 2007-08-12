@@ -131,14 +131,14 @@ containers: []\
 
     def getList(self):
         """
-        Returns a list of tuples with (Number of container, (path, target, status))
+        Returns a list of tuples with (Number of container, (path, target, status, error))
         """
         list = []
         cnt = -1
         for c in self._containers:
             cnt += 1
             cont = iter(c) # Iterate through containers atributes
-            list += [(cnt, (cont.next(), cont.next(), cont.next()))]
+            list += [(cnt, (cont.next(), cont.next(), cont.next(), cont.next()))]
         return list
 
     def mount(self, num, target=None, password=None, mount_options=None):
@@ -211,7 +211,7 @@ class TrueCont (object):
                 os.remove(randfilename) # Remove the random-file
                 self._error = tcerr.missing_sudo
                 self._status = tcerr.missing_sudo
-                child.kill(9)
+                child.close()
                 return self._error
             elif res == 2 or res == 3:
                 os.remove(randfilename) # Remove the random-file
@@ -259,15 +259,17 @@ class TrueCont (object):
                 return self._error
         command = "sudo  truecrypt -u %s %s -p %s" % (self.path, target, self.password)
         if mount_options: command.join("-M %s" % mount_options)
-        def mount_sudo(self, child):
+        def mount_sudo(self, child, sudo_passwd=None):
             """packed into a function because we maybe need to call it again and again..."""
             res = child.expect([response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, response.VOLUME_MOUNTED, pexpect.EOF, response.ALREADY_MAPPED], timeout=200)
             if res == 0:
+                if not sudo_passwd:
+                    return tcerr.missing_sudo
                 child.sendline(sudo_passwd)
-                return self.mount_sudo(child)
+                return mount_sudo(self, child)
             elif res == 1:
                 self._error = tcerr.missing_sudo
-                child.kill(9)
+                self.kill_sudo(child.pid, sudo_passwd)
                 return self._error
             elif res == 2 or res == 3:
                 self._status = tcerr.mounted
@@ -279,25 +281,27 @@ class TrueCont (object):
                 print "DEBUGGING INFORMATION"
                 print 
                 print child
-                child.kill(9)
+                child.close()
                 return tcerr.unknown_error
 
         child = pexpect.spawn(command)
-        mount_sudo(self, child)
+        mount_sudo(self, child, sudo_passwd)
  
     def close(self, sudo_passwd=None):
         """
         Unmounts the Container
         """
-        def close_sudo(self, child):
+        def close_sudo(self, child, sudo_passwd=None):
             """packed into a function because we maybe need to call it again and again..."""
             res = child.expect([response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, response.DISMOUNTING_SUCCESSFULL, pexpect.EOF], timeout=200)
             if res == 0:
+                if not sudo_passwd:
+                    return tcerr.missing_sudo
                 child.sendline(sudo_passwd)
-                return self.close_sudo(child)
+                return close_sudo(self, child)
             elif res == 1:
                 self._error = tcerr.missing_sudo
-                child.kill(9)
+                self.kill_sudo(child.pid)
                 return self._error
             elif res == 2 or res == 3:
                 self._status = tcerr.umounted
@@ -306,16 +310,17 @@ class TrueCont (object):
                 print "DEBUGGING INFORMATION"
                 print 
                 print child
-                child.kill(9)
+                child.close()
                 return tcerr.unknown_error
         command = "sudo truecrypt -d %s" % self.path
         child = pexpect.spawn(command)
-        close_sudo(self, child)
+        close_sudo(self, child, sudo_passwd)
 
     def __iter__(self):
         yield self.path
         yield self.target
         yield self._status
+        yield self._error
 
     def __str__(self):
         """
@@ -327,6 +332,34 @@ class TrueCont (object):
         if hasattr(self, "size"): string += " " + self.size + " "
         if self.target: string += self.target
         return str(path)
+
+    def kill_sudo(self, pid, sudo_passwd=None):
+        """extra function to kill a priviliged process"""
+        def killchild_sudo(child):
+            res = child.expect([response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, pexpect.EOF], timeout=10)
+            if res == 0:
+                if not sudo_passwd:
+                    return tcerr.missing_sudo
+                child.sendline(sudo_passwd)
+                return killchild_sudo(self, child)
+            elif res == 1:
+                self._error = tcerr.missing_sudo
+                child.close()
+                return self._error
+            elif res == 2:
+                return True
+            else:
+                print "DEBUGGING INFORMATION"
+                print 
+                print child
+                child.close()
+                return tcerr.unknown_error
+
+        command = "sudo kill -9 %s" % pid
+        child = pexpect.spawn(command)
+        return killchild_sudo(child)
+
+
 
 if __name__ == "__main__":
     path = "/home/dax/test1.tc"
