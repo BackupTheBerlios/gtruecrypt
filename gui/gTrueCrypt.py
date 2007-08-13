@@ -24,7 +24,8 @@
 import pygtk
 pygtk.require('2.0')
 import gtk
-"""importing classes from the TrueCrypt-Wrapper from Jens Kaldenbach"""
+"""importing classes from the TrueCrypt-Wrapper from Jens Kadenbach"""
+
 from tcw import *
 """This class includes all stuff to create and manage the main window"""
 class main_window:
@@ -43,7 +44,7 @@ class main_window:
 		self.container = gtk.TreeViewColumn('Container')
 		self.target = gtk.TreeViewColumn('Mountpoint')
 		self.state = gtk.TreeViewColumn('State')
-		self.TC = TrueCrypt("ME182BT")
+		self.TC = TrueCrypt("ME182BT") # FIXME sudo_passwd?!?
 		container = self.TC.getList()
 		for c in container:
 			container_list = [c[1][0], c[1][1], c[1][2], "True"]
@@ -61,7 +62,7 @@ class main_window:
 		self.state.pack_start(self.cell, True)
 		self.target.pack_start(self.cell1, True)
 		self.treeview.connect('cursor-changed', self.button_change)
-		self.button = gtk.Button("action")#Has to be renamed automaticly on changing cont.-state (,ount/eject/details)
+		self.button = gtk.Button("action")#Has to be renamed automaticly on changing cont.-state (mount/eject/details)
 		self.button.show()
 		self.container.set_attributes(self.cellpb, text=0)
 		self.target.set_attributes(self.cell1, text=1)
@@ -99,7 +100,7 @@ class main_window:
 			target = self.liststore.get(iter, 1)
 			if state[0] == "volume not mounted":
 				self.liststore.set(iter, 2, "mounted")
-				print self.TC.mount(0, target[0], "ME182BT")
+				print self.TC.mount(0, target[0], "ME182BT") # FIXME sudo_passwd ?!?
 			elif state[0] == "mounted":
 				self.liststore.set(iter, 2, "unmounted")
 				
