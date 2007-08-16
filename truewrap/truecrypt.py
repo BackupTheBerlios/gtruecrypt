@@ -1,6 +1,6 @@
 #!/usr/bin/python 
 #
-#      gTrueCrypt.py - gTrueCrypt 0.0.1
+#      truecrypt.py - truecrypt wrapper libary
 #
 #   author:      Jens Kadenbach
 #   copyright:   2007 by Jens Kadenbach
@@ -25,13 +25,17 @@ import yaml
 import tcerr
 import tcresponse as response
 import pexpect
+import tempfile
 
 #TODO Add more filesystems for creation
+#TODO exception class
 
 class TrueCrypt (object):
     """Wrapper class to access TrueCrypt functions and to store and load options"""
     def __init__(self, sudo_passwd=None, preferences=None):
         """_containers is a list of TrueCont Objects"""
+        if not self.findBinary():
+            raise TrueException.TrueCryptNotFound
         self.__sudo_passwd = sudo_passwd
         self.__version__ = "0.2-alpha"
         self.__pref_path = self.loadPrefPath(preferences)
@@ -168,6 +172,12 @@ containers: []\
            self._containers += [cont]
            self.addtoyaml(self._containers.index(cont))
 
+    def findBinary(self):
+        for path in  os.defpath.split(':')[1:]:
+            path.join('truecrypt')
+            if os.path.isfile(path):
+                return True
+        return False
 
 class TrueCont (object):
     def __init__(self, path, password = None, target=None):
@@ -195,11 +205,8 @@ class TrueCont (object):
         # Create a file in /tmp with 320 random ASCI chars to give truecrypt random input
         chars = string.letters + string.digits
         random = "".join([choice(chars) for c in xrange(320)])
-        randfilename = "/tmp/randfile"
-        if os.path.isfile(randfilename): os.remove(randfilename) # Delte any previous randfiles
-        randfile = file(randfilename, "w")
+        randfile = tempfile.NamedTemporaryFile()
         randfile.write(random)
-        randfile.close()
         # File created
         def create_sudo(self, child):
             """packed into a function because we maybe need to call it again and again..."""
@@ -225,9 +232,10 @@ class TrueCont (object):
                 return tcerr.unknown_error
  
         self.size = size
-        command = "sudo truecrypt -u -p %s  --size %s --type %s --encryption %s --hash %s --filesystem %s --keyfile '' --overwrite --random-source %s -c %s" % (self.password, self.size, voltype, ea, ha, fs, randfilename, self.path)
+        command = "sudo truecrypt -u -p %s  --size %s --type %s --encryption %s --hash %s --filesystem %s --keyfile '' --overwrite --random-source %s -c %s" % (self.password, self.size, voltype, ea, ha, fs, randfile.name, self.path)
         child = pexpect.spawn(command)
         create_sudo(self, child) 
+        randfile.close() # Remove the tempfile
 
     def frstStatus(self): # TODO implement searching if it is mounted
         if os.path.isfile(self.path):
@@ -359,7 +367,10 @@ class TrueCont (object):
         child = pexpect.spawn(command)
         return killchild_sudo(child)
 
-
+class TrueException(Exception):
+    """Error Class"""
+    class TrueCryptNotFound(Exception):
+        print 'Error: truecrypt binary was not found!'
 
 if __name__ == "__main__":
     path = "/home/dax/test1.tc"
