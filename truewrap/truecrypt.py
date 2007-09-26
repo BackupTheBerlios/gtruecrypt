@@ -26,9 +26,9 @@ import tcerr
 import tcresponse as response
 import pexpect
 import tempfile
+import sys
 
 #TODO Add more filesystems for creation
-#TODO exception class
 
 class TrueCrypt (object):
     """Wrapper class to access TrueCrypt functions and to store and load options"""
@@ -132,6 +132,8 @@ containers: []\
             self._containers += [cont]
             self.addtoyaml(self._containers.index(cont))
             return str(cont)
+        else:
+            return False
 
     def getList(self):
         """
@@ -370,7 +372,7 @@ class TrueCont (object):
 class TrueException(Exception):
     """Error Class"""
     class TrueCryptNotFound(Exception):
-        print 'Error: truecrypt binary was not found!'
+        sys.stderr.write("Error: truecrypt binary was not found!\n")
 
 if __name__ == "__main__":
     path = "/home/dax/test1.tc"
