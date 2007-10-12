@@ -27,6 +27,7 @@ import tcresponse as response
 import pexpect
 import tempfile
 import sys
+from other import which
 
 #TODO Add more filesystems for creation
 
@@ -76,7 +77,6 @@ class TrueCrypt (object):
 
     def save(self):
         """Refresh and save the prefences"""
-        
         f = file(self.__pref_path, 'w')
         f.write(yaml.dump(self.__pref))
         f.close()
@@ -93,7 +93,7 @@ class TrueCrypt (object):
         """Create a default config"""
         default="""\
 containers: []\
-""" 
+"""
         yamlfile = file(self.__pref_path, 'w')
         yamlfile.write(default)
         yamlfile.close()
@@ -121,7 +121,7 @@ containers: []\
         voltype normal or hidden
         size    in bytes or like "10M", look in TrueCrypts manpage!
         fs  fat or none # I will implement ext3 as soon as possible
-        ha  Hash algorithm 
+        ha  Hash algorithm
         ea  Encryption algorithm
 
         returns __str__ of TrueCont Object
@@ -132,8 +132,6 @@ containers: []\
             self._containers += [cont]
             self.addtoyaml(self._containers.index(cont))
             return str(cont)
-        else:
-            return False
 
     def getList(self):
         """
@@ -154,7 +152,7 @@ containers: []\
         num (int) - Number of a TrueCont Object in the self._containers list
         target (str) - Target directory
         """
-        return self._containers[num].open(password, target, mount_options, self.__sudo_passwd)    
+        return self._containers[num].open(password, target, mount_options, self.__sudo_passwd)
 
     def close(self, num):
         self._containers[num].close(self.__sudo_passwd)
@@ -173,13 +171,13 @@ containers: []\
            cont = TrueCont(path, password, target)
            self._containers += [cont]
            self.addtoyaml(self._containers.index(cont))
+           return self._containers.index(cont)
 
     def findBinary(self):
-        for path in  os.defpath.split(':')[1:]:
-            path.join('truecrypt')
-            if os.path.isfile(path):
-                return True
-        return False
+        try:
+            return which.which('truecrypt')
+        except WhichError:
+            return False
 
 class TrueCont (object):
     def __init__(self, path, password = None, target=None):
@@ -229,14 +227,14 @@ class TrueCont (object):
             else:
                 os.remove(randfilename) # Remove the random-file 
                 print "DEBUGGING INFORMATION"
-                print 
+                print
                 print child
                 return tcerr.unknown_error
- 
+
         self.size = size
         command = "sudo truecrypt -u -p %s  --size %s --type %s --encryption %s --hash %s --filesystem %s --keyfile '' --overwrite --random-source %s -c %s" % (self.password, self.size, voltype, ea, ha, fs, randfile.name, self.path)
         child = pexpect.spawn(command)
-        create_sudo(self, child) 
+        create_sudo(self, child)
         randfile.close() # Remove the tempfile
 
     def frstStatus(self): # TODO implement searching if it is mounted
@@ -271,7 +269,7 @@ class TrueCont (object):
         if mount_options: command.join("-M %s" % mount_options)
         def mount_sudo(self, child, sudo_passwd=None):
             """packed into a function because we maybe need to call it again and again..."""
-            res = child.expect([response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, response.VOLUME_MOUNTED, pexpect.EOF, response.ALREADY_MAPPED], timeout=200)
+            res = child.expect([response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, response.VOLUME_MOUNTED, pexpect.EOF, response.ALREADY_MAPPED], timeout=5)
             if res == 0:
                 if not sudo_passwd:
                     return tcerr.missing_sudo
@@ -289,14 +287,14 @@ class TrueCont (object):
                 return self._status
             else:
                 print "DEBUGGING INFORMATION"
-                print 
+                print
                 print child
                 child.close()
                 return tcerr.unknown_error
 
         child = pexpect.spawn(command)
         mount_sudo(self, child, sudo_passwd)
- 
+
     def close(self, sudo_passwd=None):
         """
         Unmounts the Container
@@ -318,7 +316,7 @@ class TrueCont (object):
                 return self._status
             else:
                 print "DEBUGGING INFORMATION"
-                print 
+                print
                 print child
                 child.close()
                 return tcerr.unknown_error
@@ -360,7 +358,7 @@ class TrueCont (object):
                 return True
             else:
                 print "DEBUGGING INFORMATION"
-                print 
+                print
                 print child
                 child.close()
                 return tcerr.unknown_error
@@ -372,7 +370,7 @@ class TrueCont (object):
 class TrueException(Exception):
     """Error Class"""
     class TrueCryptNotFound(Exception):
-        sys.stderr.write("Error: truecrypt binary was not found!\n")
+        pass
 
 if __name__ == "__main__":
     path = "/home/dax/test1.tc"
@@ -387,8 +385,8 @@ if __name__ == "__main__":
 
     t = TrueCrypt(sudo)
     print t.getList()
-    t.mount(0, target, passwd)
-    print t.getList()
-    t.close(0)
-    print t.getList()
-    t.save() 
+    #t.mount(0, target, passwd)
+    #print t.getList()
+    #t.close(0)
+    #print t.getList()
+    #t.save()
