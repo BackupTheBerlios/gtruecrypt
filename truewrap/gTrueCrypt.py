@@ -19,10 +19,13 @@
 #  GNU General Public License for more details.
 #
 
+version = '0.2-alpha'
+
 import pygtk
 pygtk.require('2.0')
 import gtk
 import sys
+from optparse import OptionParser
 """Try to load the backend"""
 try:
 	from truecrypt import *
@@ -199,17 +202,20 @@ class gTrueCrypt:
 		"""Stuff for closing gTC"""
 		gtk.main_quit()
 		return False
-		
+
 def main():
-	gtk.main()
-	return 0       
+        parser = OptionParser(version="%prog blub" )
+        (options, args) = parser.parse_args()
+        gui = gTrueCrypt()
+        gtk.main()
+        return 0
 
 if __name__ == "__main__":
 	print
 	print "###########################################################"
 	print "#                 gTrueCrypt 0.2-alpha                    #"
 	print "#                                                         #"
-	print "#   backend by:      Jens Kadenbach                       #"         
+	print "#   backend by:      Jens Kadenbach                       #"
 	print "#   gui by:       Sebastian Billaudelle                   #"
 	print "#                                                         #"
 	print "# This program is free software. It is published under    #"
@@ -224,39 +230,4 @@ if __name__ == "__main__":
 	print "# See the GNU General Public License for more details.    #"
 	print "###########################################################"
 	print
-	argc = len(sys.argv)
-	if argc == 2:
-		path = sys.argv[1]
-		if path == "-h":
-			print "usage: gtruecrypt [-h|--help|-v|--version]"
-			print
-			print "  -h|--help     show this help and exit"
-			print "  -v|--version  show version and exit"
-			print
-			print "  For normal startup don't give any arguments!"
-			print
-		elif path == "--help":
-			print "usage: gtruecrypt [-h|--help|-v|--version]"
-			print
-			print "  -h|--help     show this help and exit"
-			print "  -v|--version  show version and exit"
-			print
-			print "  For normal startup don't give any arguments!"
-			print
-		elif path == "-v":
-			print "gTrueCrypt 0.2-alpha"
-			print
-		elif path == "--version":
-			print "gTrueCrypt 0.2-alpha"
-			print
-		else:
-			print "Unknown argument..."
-			print "usage: gtruecrypt [-h|--help|-v|--version]"
-			print
-	elif argc > 2:
-		print "Sorry, but I take at least one argument..."
-		print "usage: gtruecrypt [-h|--help|-v|--version]"
-		print
-	else:
-		gTrueCrypt()
-		main()
+        main()
