@@ -29,10 +29,11 @@ import tcresponse as response
 import pexpect
 import tempfile
 import sys
+from other import which
 
 #TODO Add more filesystems for creation
 
-class TrueWrap (object):
+class TrueCrypt (object):
     """Wrapper class to access TrueCrypt functions and to store and load options"""
     def __init__(self, sudo_passwd=None, preferences=None):
         """_containers is a list of TrueCont Objects"""
@@ -151,7 +152,7 @@ containers: []\
         num (int) - Number of a TrueCont Object in the self._containers list
         target (str) - Target directory
         """
-        return self._containers[num].open(password, target, mount_options, self.__sudo_passwd) 
+        return self._containers[num].open(password, target, mount_options, self.__sudo_passwd)
 
     def close(self, num):
         self._containers[num].close(self.__sudo_passwd)
@@ -172,12 +173,16 @@ containers: []\
            self.addtoyaml(self._containers.index(cont))
 
     def findBinary(self):
-        for path in  os.defpath.split(':')[1:]:
-            path.join('truecrypt')
-            if os.path.isfile(path):
-                return True
-        #return False #FIXME: TrueCrypt is installed, but there's this errormessage...
-        return True
+        try:
+            path =  which.which('truecrypt')
+            return True
+        except which.WhichError:
+            return False
+#        for path in  os.defpath.split(':')[1:]:
+#            path.join('truecrypt')
+#            if os.path.isfile(path):
+#                return True
+#        return True
 
 class TrueCont (object):
     def __init__(self, path, password = None, target=None):
@@ -210,7 +215,9 @@ class TrueCont (object):
         # File created
         def create_sudo(self, child):
             """packed into a function because we maybe need to call it again and again..."""
-            res = child.expect([response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, response.VOLUME_CREATED, response.EOF], timeout=200)
+            res = child.expect([response.ENTER_SUDO_PASSWORD,
+                response.SUDO_WRONG_PASSWORD, response.VOLUME_CREATED,
+                response.EOF], timeout=10)
             if res == 0:
                 child.sendline(sudo_passwd)
                 self.create_sudo(child)
@@ -241,7 +248,7 @@ class TrueCont (object):
         """Will Return a nice Tuple of mapped TrueCrypt objects"""
         mapped = commands.getoutput("truecrypt --list")
         return mapped
-    
+
     def frstStatus(self):
         if os.path.isfile(self.path):
             self.mapped_result = self.getMapped()
@@ -278,17 +285,27 @@ class TrueCont (object):
             except:
                 self._error = tcerr.cannot_create_dir
                 return self._error
+        if not os.path.isfile(self.path):
+            self._error = tcerr.not_found
+            return self._error
         command = "sudo  truecrypt -u %s %s -p %s" % (self.path, target, self.password)
         if mount_options: command.join("-M %s" % mount_options)
         def mount_sudo(self, child, sudo_passwd=None):
             """packed into a function because we maybe need to call it again and again..."""
-            res = child.expect([response.INCORRECT_VOLUME, response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, response.VOLUME_MOUNTED, pexpect.EOF, response.ALREADY_MAPPED], timeout=200)
+            res = child.expect([
+                response.INCORRECT_VOLUME,
+                response.ENTER_SUDO_PASSWORD,
+                response.SUDO_WRONG_PASSWORD,
+                response.VOLUME_MOUNTED,
+                pexpect.EOF,
+                response.ALREADY_MAPPED],
+                timeout=10)
             """
             added: wrong_password-stuff...
-            """ 
+            """
             if res == 0:
-            	self._error = tcerr.wrong_password
-            	return self._error
+                self._error = tcerr.wrong_password
+                return self._error
             elif res == 1:
                 if not sudo_passwd:
                     return tcerr.missing_sudo
@@ -306,21 +323,28 @@ class TrueCont (object):
                 return self._status
             else:
                 print "DEBUGGING INFORMATION"
-                print 
+                print
                 print child
                 child.close()
                 return tcerr.unknown_error
 
         child = pexpect.spawn(command)
-        return mount_sudo(self, child, sudo_passwd) #Added a simple "return": Before it doesn't return anything
- 
+        return mount_sudo(self, child, sudo_passwd)
+
     def close(self, sudo_passwd=None):
         """
         Unmounts the Container
         """
+        if not self.status == tcerr.mounted:
+            return tcerr.umounted
+
         def close_sudo(self, child, sudo_passwd=None):
             """packed into a function because we maybe need to call it again and again..."""
-            res = child.expect([response.ENTER_SUDO_PASSWORD, response.SUDO_WRONG_PASSWORD, response.DISMOUNTING_SUCCESSFULL, pexpect.EOF], timeout=200)
+            res = child.expect([
+                response.ENTER_SUDO_PASSWORD,
+                response.SUDO_WRONG_PASSWORD,
+                response.DISMOUNTING_SUCCESSFULL,
+                pexpect.EOF], timeout=10)
             if res == 0:
                 if not sudo_passwd:
                     return tcerr.missing_sudo
@@ -335,13 +359,13 @@ class TrueCont (object):
                 return self._status
             else:
                 print "DEBUGGING INFORMATION"
-                print 
+                print
                 print child
                 child.close()
                 return tcerr.unknown_error
         command = "sudo truecrypt -d %s" % self.path
         child = pexpect.spawn(command)
-        close_sudo(self, child, sudo_passwd)
+        return close_sudo(self, child, sudo_passwd)
 
     def __iter__(self):
         yield self.path
@@ -377,7 +401,7 @@ class TrueCont (object):
                 return True
             else:
                 print "DEBUGGING INFORMATION"
-                print 
+                print
                 print child
                 child.close()
                 return tcerr.unknown_error
@@ -389,7 +413,7 @@ class TrueCont (object):
 class TrueException(Exception):
     """Error Class"""
     class TrueCryptNotFound(Exception):
-        sys.stderr.write("Error: truecrypt binary was not found!\n")
+        pass
 
 if __name__ == "__main__":
     path = "/home/dax/test1.tc"
@@ -402,10 +426,10 @@ if __name__ == "__main__":
     fs = "fat"
     sudo = "blub"
 
-    t = TrueWrap(sudo)
+    t = TrueCrypt(sudo)
     print t.getList()
     t.mount(0, target, passwd)
     print t.getList()
     t.close(0)
     print t.getList()
-    t.save() 
+    t.save()

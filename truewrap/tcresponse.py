@@ -41,7 +41,7 @@ ALREADY_MAPPED = ".*Volume already mapped.*"
 CANNOT_OPEN_VOLUME = '.*Cannot open volume.*'
 NO_VOLUMES_MAPPED = ".*No volumes mapped.*"
 
-ENTER_SUDO_PASSWORD = "Password:.*"
+ENTER_SUDO_PASSWORD = '(Password\s*:)|(\[sudo\] password for user:).*'
 NOT_SUDO = " ^((?!Password).)*$ "
 
 SUDO_TEST= "sudotest"
