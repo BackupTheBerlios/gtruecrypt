@@ -1,4 +1,4 @@
-#!/usr/bin/python 
+#!/usr/bin/python
 #
 #      truecrypt.py - truecrypt wrapper libary
 #
@@ -17,7 +17,7 @@
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
-# 
+#
 
 
 import os
@@ -79,7 +79,7 @@ class TrueCrypt (object):
 
     def save(self):
         """Refresh and save the prefences"""
-        
+
         f = file(self.__pref_path, 'w')
         f.write(yaml.dump(self.__pref))
         f.close()
@@ -96,7 +96,7 @@ class TrueCrypt (object):
         """Create a default config"""
         default="""\
 containers: []\
-""" 
+"""
         yamlfile = file(self.__pref_path, 'w')
         yamlfile.write(default)
         yamlfile.close()
@@ -119,7 +119,7 @@ containers: []\
         voltype normal or hidden
         size    in bytes or like "10M", look in TrueCrypts manpage!
         fs  fat or none # I will implement ext3 as soon as possible
-        ha  Hash algorithm 
+        ha  Hash algorithm
         ea  Encryption algorithm
 
         returns __str__ of TrueCont Object
@@ -132,6 +132,9 @@ containers: []\
             return str(cont)
         else:
             return False
+
+    def setList(self,number, path, target, password="none"):
+    	print
 
     def getList(self):
         """
@@ -197,7 +200,7 @@ class TrueCont (object):
         voltype normal or hidden
         size    in bytes or like "10M", look in TrueCrypts Manpage!
         fs  fat or none # I will implement ext3 as soon as possible
-        ha  Hash algorithm 
+        ha  Hash algorithm
         ea  Encryption algorithm
         """
         if not voltype in ["normal", "hidden"]:
@@ -232,16 +235,16 @@ class TrueCont (object):
                 self._status = tcerr.umounted
                 return tcerr.created
             else:
-                os.remove(randfilename) # Remove the random-file 
+                os.remove(randfilename) # Remove the random-file
                 print "DEBUGGING INFORMATION"
-                print 
+                print
                 print child
                 return tcerr.unknown_error
- 
+
         self.size = size
         command = "sudo truecrypt -u -p %s  --size %s --type %s --encryption %s --hash %s --filesystem %s --keyfile '' --overwrite --random-source %s -c %s" % (self.password, self.size, voltype, ea, ha, fs, randfile.name, self.path)
         child = pexpect.spawn(command)
-        create_sudo(self, child) 
+        create_sudo(self, child)
         randfile.close() # Remove the tempfile
 
     def getMapped(self):
@@ -335,7 +338,7 @@ class TrueCont (object):
         """
         Unmounts the Container
         """
-        if not self.status == tcerr.mounted:
+        if not self._status == tcerr.mounted:
             return tcerr.umounted
 
         def close_sudo(self, child, sudo_passwd=None):
