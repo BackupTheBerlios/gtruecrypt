@@ -4,7 +4,7 @@
 #
 #	author:		Sebastian Billaudelle
 #	copyright:	2007 by Sebastian Billaudelle
-#	license:		GNU General Public License, version 2 only			
+#	license:		GNU General Public License, version 2 only
 #
 #
 #	This program is free software. It's allowed to modify and/or redistribute
@@ -42,7 +42,7 @@ class gTrueCrypt:
 		self.createMainWindow()
 		self.setMainWindowLayout()
 		self.loadList()
-		
+
 	def createMainWindow(self):
 		"""Create a new window and show it"""
 		self.main_window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -51,7 +51,7 @@ class gTrueCrypt:
 		self.main_window.set_size_request(650, 200)
 		self.main_window.connect("delete_event", self.delete_event)
 		self.main_window.show()
-	
+
 	def setMainWindowLayout(self):
 		"""Set the layout of the main window"""
 		self.list = gtk.ListStore(int, str, str, str, 'gboolean')
@@ -83,7 +83,7 @@ class gTrueCrypt:
 		self.action_button.connect('clicked', self.action)
 		self.edit_button = gtk.Button("edit")
 		self.edit_button.show()
-		#self.edit_button.connect('clicked', self.edit)
+		self.edit_button.connect('clicked', self.edit)
 		self.add_button = gtk.Button("add")
 		self.add_button.show()
 		#self.add_button.connect('clicked', self.add)
@@ -102,18 +102,18 @@ class gTrueCrypt:
 		self.vbox.pack_start(self.hbox, False)
 		self.main_window.add(self.vbox)
 		self.main_window.show_all()
-		
+
 	def loadList(self):
 		"""Load the list of containers in the TreeView"""
 		for c in self.__container:
 			container_list = [c[0], c[1][0], c[1][1], c[1][2], "True"]
 			self.list.append(container_list)
-			
+
 	def reloadList(self):
 		"""Stuff to reload the list"""
 		self.list.clear()
 		self.loadList()
-			
+
 	def actionButtonChange(self, table):
 		"""Switches the value of the action-button"""
 		selection = self.table.get_selection()
@@ -130,7 +130,7 @@ class gTrueCrypt:
 				self.action_button.set_label("details")
 			elif state[0] == "mounted":
 				self.action_button.set_label("unmount")
-				
+
 	def action(self, button):
 		"""Eventhandler of the action-button"""
 		self.selection = self.table.get_selection()
@@ -145,7 +145,63 @@ class gTrueCrypt:
 			elif self.state[0] == "mounted":
 				self.umountContainer(self.number[0])
 		return
-		
+
+	def edit(self, button):
+		"""Eventhandler of the edit-button"""
+		self.selection = self.table.get_selection()
+		self.model, self.iter = self.selection.get_selected()
+		if iter:
+			self._number = self.list.get(self.iter, 0)
+			self._path = self.list.get(self.iter, 1)
+			self._target = self.list.get(self.iter, 2)
+			self._state = self.list.get(self.iter, 3)
+			self.editDialog()
+
+	def editDialog(self, wrong_edit=False):
+		"""Stuff for the password-dialog"""
+		self.edit_dialog_window = gtk.Window(gtk.WINDOW_TOPLEVEL)
+		self.edit_dialog_window.set_title("Edit")
+		self.edit_dialog_window.set_border_width(5)
+		self.edit_dialog_layout = gtk.Table(4, 3, False)
+		self.edit_dialog_layout.set_row_spacings(2)
+		self.edit_dialog_layout.set_col_spacings(2)
+		self.edit_dialog_layout.show()
+		self.edit_dialog_label = gtk.Label("Here you can change all the stuff containing\nto the selected container.")
+		self.edit_dialog_path_label = gtk.Label("Container")
+		self.edit_dialog_path_label.show()
+		self.edit_dialog_path_select = gtk.Button("...")
+		self.edit_dialog_path_select.connect('clicked', self.pathFileselector)
+		self.edit_dialog_path_select.show()
+		self.edit_dialog_path_entry = gtk.Entry(max=0)
+		self.edit_dialog_path_entry.set_text(self._path[0])
+		self.edit_dialog_target_label = gtk.Label("Target")
+		self.edit_dialog_target_label.show()
+		self.edit_dialog_target_entry = gtk.Entry(max=0)
+		self.edit_dialog_target_entry.set_text(self._target[0])
+		self.edit_dialog_label.show()
+		self.edit_dialog_path_entry.show()
+		self.edit_dialog_button_ok = gtk.Button("OK")
+		self.edit_dialog_button_cancel = gtk.Button("Cancel")
+		self.edit_dialog_button_ok.connect('clicked', self.editDialogOk)
+		self.edit_dialog_button_cancel.connect('clicked', self.editDialogCancel)
+		self.edit_dialog_layout.attach(self.edit_dialog_label, 0, 2, 0, 1)
+  		self.edit_dialog_layout.attach(self.edit_dialog_path_label, 0, 1, 1, 2)
+  		self.edit_dialog_layout.attach(self.edit_dialog_path_entry, 1, 2, 1, 2)
+  		self.edit_dialog_layout.attach(self.edit_dialog_path_select, 2, 3, 1, 2)
+  		self.edit_dialog_layout.attach(self.edit_dialog_target_label, 0, 1, 2, 3)
+  		self.edit_dialog_layout.attach(self.edit_dialog_target_entry, 1, 2, 2, 3)
+  		self.edit_dialog_layout.attach(self.edit_dialog_button_ok, 0, 1, 3, 4)
+  		self.edit_dialog_layout.attach(self.edit_dialog_button_cancel, 1, 2, 3, 4)
+		self.edit_dialog_window.add(self.edit_dialog_layout)
+		self.edit_dialog_window.show_all()
+
+	def pathFileselector(self, button):
+		self.path_fileselector = gtk.FileSelection("select container")
+		self.path_fileselector.ok_button.connect("clicked", self.fileselectorOk)
+		self.path_fileselector.cancel_button.connect("clicked", self.fileselectorCancel)
+		self.path_fileselector.set_filename(self._path[0])
+		self.path_fileselector.show()
+
 	def pwdDialog(self, wrong_pwd=False):
 		"""Stuff for the password-dialog"""
 		self.pwd_dialog_window = gtk.Window(gtk.WINDOW_TOPLEVEL)
@@ -171,17 +227,37 @@ class gTrueCrypt:
   		self.pwd_dialog_layout.attach(self.pwd_dialog_button_cancel, 1, 2, 2, 3)
 		self.pwd_dialog_window.add(self.pwd_dialog_layout)
 		self.pwd_dialog_window.show_all()
-		
+
 	def mountContainer(self, number, target):
 		"""Function for mounting a container"""
 		self.pwdDialog()
-	
+
 	def umountContainer(self, number):
 		"""Function for umounting a container"""
 		self.list.set(self.iter, 3, "volume not mounted")
 		self.action_button.set_label("mount")
-		self.TW.close(self.number[0])	
-		
+		self.TW.close(self.number[0])
+
+	def fileselectorOk(self, button):
+		"""Eventhandler of the OK-button in the"""
+		self._new_path = self.path_fileselector.get_filename()
+		self.edit_dialog_path_entry.set_text(self._new_path)
+		self.path_fileselector.destroy()
+
+	def fileselectorCancel(self, button):
+		"""Eventhandler of the Cancel-button in the"""
+		self.path_fileselector.destroy()
+
+	def editDialogOk(self, button):
+		"""Eventhandler of the OK-button in the editDialog"""
+		self.TW.setList(self._number[0], self.edit_dialog_path_entry.get_text(), self.edit_dialog_target_entry.get_text())
+		self.list.set(self.iter, 1, self.edit_dialog_path_entry.get_text(), 2, self.edit_dialog_target_entry.get_text())
+		self.edit_dialog_window.destroy()
+
+	def editDialogCancel(self, button):
+		"""Eventhandler of the Cancel-button in the editDialog"""
+		self.edit_dialog_window.destroy()
+
 	def pwdDialogOk(self, button):
 		"""Eventhandler of the OK-button in the pwdDialog"""
 		self.pwd = self.pwd_dialog_entry.get_text()
@@ -193,11 +269,11 @@ class gTrueCrypt:
 		elif self.result == "mounted":
 			self.list.set(self.iter, 3, "mounted")
 			self.action_button.set_label("unmount")
-		
+
 	def pwdDialogCancel(self, button):
 		"""Eventhandler of the Cancel-button in the pwdDialog"""
 		self.pwd_dialog_window.destroy()
-		
+
 	def delete_event(self, widget, event, data=None):
 		"""Stuff for closing gTC"""
 		gtk.main_quit()
