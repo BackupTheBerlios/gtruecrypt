@@ -140,10 +140,13 @@ class gTrueCrypt:
 		self.selection = self.table.get_selection()
 		self.model, self.iter = self.selection.get_selected()
 		if iter:
-			self.number = self.list.get(self.iter, 0)
-			self.path = self.list.get(self.iter, 1)
-			self.target = self.list.get(self.iter, 2)
-			self.state = self.list.get(self.iter, 3)
+			try:
+				self.number = self.list.get(self.iter, 0)
+				self.path = self.list.get(self.iter, 1)
+				self.target = self.list.get(self.iter, 2)
+				self.state = self.list.get(self.iter, 3)
+			except TypeError:
+				return False #FIXME Error dialog needed!
 			if self.state[0] == "volume not mounted":
 				self.mountContainer(self.number[0], self.target[0])
 			elif self.state[0] == "mounted":
@@ -155,10 +158,13 @@ class gTrueCrypt:
 		self.selection = self.table.get_selection()
 		self.model, self.iter = self.selection.get_selected()
 		if iter:
-			self._number = self.list.get(self.iter, 0)
-			self._path = self.list.get(self.iter, 1)
-			self._target = self.list.get(self.iter, 2)
-			self._state = self.list.get(self.iter, 3)
+            		try:
+				self._number = self.list.get(self.iter, 0)
+				self._path = self.list.get(self.iter, 1)
+				self._target = self.list.get(self.iter, 2)
+				self._state = self.list.get(self.iter, 3)
+			except TypeError: # If there are no entries....
+				return False #FIXME Error dialog needed
 			self.editDialog()
 
 	def add(self, button):
