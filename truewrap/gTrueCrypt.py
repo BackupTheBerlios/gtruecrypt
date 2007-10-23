@@ -35,18 +35,24 @@ except:
 
 """This is the main class of gTrueCrypt"""
 class gTrueCrypt:
-	def __init__(self):
+	def __init__(self, tray=None):
 		self._icon_path = os.path.join(os.path.dirname(__file__), "gTrueCrypt.png")
 		self._icon = gtk.gdk.pixbuf_new_from_file(self._icon_path)
 		"""Get list from backend"""
 		self.TW = TrueCrypt()
 		self.__container = self.TW.getList()
-		self.createMainWindow()
+		if tray == True:
+			self.createMainWindow(tray=True)
+		else:
+			self.createMainWindow()
 		self.setMainWindowLayout()
 		self.loadList()
-		self._show_hide_counter = 1
+		if tray == True:
+			self._show_hide_counter = 0
+		else:
+			self._show_hide_counter = 1
 
-	def createMainWindow(self):
+	def createMainWindow(self, tray=None):
 		"""Create a new window and show it"""
 		self.main_window = gtk.Window(gtk.WINDOW_TOPLEVEL)
 		self.main_window.set_title("gTrueCrypt")
@@ -54,7 +60,8 @@ class gTrueCrypt:
 		self.main_window.set_border_width(20)
 		self.main_window.set_size_request(650, 200)
 		self.main_window.connect("delete_event", self.delete_event)
-		self.main_window.show()
+		if tray == None:
+			self.main_window.show()
 
 	def setMainWindowLayout(self):
 		"""Set the layout of the main window"""
@@ -81,6 +88,7 @@ class gTrueCrypt:
 		self.scrolledwindow = gtk.ScrolledWindow()
 		self.scrolledwindow.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
 		self.scrolledwindow.add(self.table)
+		self.scrolledwindow.show()
 		self.table.connect('cursor-changed', self.actionButtonChange)
 		self.action_button = gtk.Button("action")
 		self.action_button.show()
@@ -105,7 +113,8 @@ class gTrueCrypt:
 		self.vbox.pack_start(self.scrolledwindow, True)
 		self.vbox.pack_start(self.hbox, False)
 		self.main_window.add(self.vbox)
-		self.main_window.show_all()
+		self.table.show()
+		#self.main_window.show_all()
 
 	def loadList(self):
 		"""Load the list of containers in the TreeView"""
@@ -409,9 +418,24 @@ class gTrueCrypt:
 			self._show_hide_counter = 1
 
 def main():
-		parser = OptionParser(version="%prog blub" )
+		parser=OptionParser(add_help_option=False)
+		parser.add_option( '-h','--help', '-?',
+                 action='help',
+                 help='show this help message and exit')
+		parser.version="%prog 0.3.1"
+		parser.add_option('-v', '--version',
+                 action='version',
+                 help='show version info and exit')
+		parser.add_option('-t', '--tray',
+				 action='store_true',
+				 dest='hidden',
+                 help='start gTrueCrypt in hidden mode (minimized in tray)')
+
 		(options, args) = parser.parse_args()
-		gui = gTrueCrypt()
+		if options.hidden == True:
+			gui = gTrueCrypt(tray=True)
+		else:
+			gui = gTrueCrypt()
 		gui.statusIcon()
 		gtk.main()
 		return 0
