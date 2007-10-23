@@ -231,8 +231,39 @@ class gTrueCrypt:
 		elif self.add_dialog_counter == 2:
 			if self.add_dialog_add_radio.get_active() == True:
 				self.add_dialog_label.set_text("Select a container! It will be added to the list...")
+				self.add_dialog_add_radio.destroy()
+				self.add_dialog_create_radio.destroy()
+				self.add_dialog_layout = gtk.Table(3, 2, False)
+				self.add_dialog_layout.set_row_spacings(2)
+				self.add_dialog_layout.set_col_spacings(2)
+				self.add_dialog_layout.show()
+				self.add_dialog_path_label = gtk.Label("Path to of the container you want to add")
+				self.add_dialog_path_label.show()
+				self.add_dialog_path_select = gtk.Button("...")
+				self.add_dialog_path_select.connect('clicked', self.pathFileselector)
+				self.add_dialog_path_select.show()
+				self.add_dialog_path_entry = gtk.Entry(max=0)
+				self.add_dialog_path_entry.show()
+				self.add_dialog_target_label = gtk.Label("Path you want to mount the container")
+				self.add_dialog_target_label.show()
+				self.add_dialog_target_select = gtk.Button("...")
+				self.add_dialog_target_select.connect('clicked', self.targetFileselector)
+				self.add_dialog_target_select.show()
+				self.add_dialog_target_entry = gtk.Entry(max=0)
+				self.add_dialog_label.show()
+				self.add_dialog_path_entry.show()
+				self.add_dialog_target_entry.show()
+  				self.add_dialog_layout.attach(self.add_dialog_path_label, 0, 1, 1, 2)
+  		  		self.add_dialog_layout.attach(self.add_dialog_path_entry, 1, 2, 1, 2)
+  		  		self.add_dialog_layout.attach(self.add_dialog_path_select, 2, 3, 1, 2)
+  		  		self.add_dialog_layout.attach(self.add_dialog_target_label, 0, 1, 2, 3)
+  		  		self.add_dialog_layout.attach(self.add_dialog_target_entry, 1, 2, 2, 3)
+  		  		self.add_dialog_layout.attach(self.add_dialog_target_select, 2, 3, 2, 3)
+		  		self.add_dialog_window.vbox.pack_start(self.add_dialog_layout, True, True, 0)
 			elif self.add_dialog_create_radio.get_active() == True:
-				print "Not implemented yet!"
+				self.add_dialog_label.set_text("Not implemented yet...")
+				self.add_dialog_add_radio.destroy()
+				self.add_dialog_create_radio.destroy()
 
 
 	def responseEditDialog(self, dialog, response_id):
@@ -247,6 +278,10 @@ class gTrueCrypt:
 
 	def responseAddDialog(self, dialog, response_id):
 		if response_id == gtk.RESPONSE_OK:
+			if self.add_dialog_add_radio.get_active() == True and self.add_dialog_counter == 2:
+				self.TW.setList(None, self.add_dialog_path_entry.get_text(), self.add_dialog_target_entry.get_text())
+				self.add_dialog_window.destroy()
+				return
 			self.add_dialog_counter = self.add_dialog_counter + 1
 			self.addDialog()
 		else:
@@ -254,20 +289,34 @@ class gTrueCrypt:
 			self._show_hide_counter = 1
 
 	def pathFileselector(self, button):
-		self.path_fileselector = gtk.FileChooserDialog("Choose container", self.edit_dialog_window, gtk.FILE_CHOOSER_ACTION_OPEN, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
-		self.path_fileselector.set_filename(self._path[0])
-		self.path_fileselector_response = self.path_fileselector.run()
-		if self.path_fileselector_response == gtk.RESPONSE_OK:
-			self.edit_dialog_path_entry.set_text(self.path_fileselector.get_filename())
-		self.path_fileselector.destroy()
+		if button == self.add_dialog_path_select:
+			self.path_fileselector = gtk.FileChooserDialog("Choose container", self.add_dialog_window, gtk.FILE_CHOOSER_ACTION_OPEN, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+			self.path_fileselector_response = self.path_fileselector.run()
+			if self.path_fileselector_response == gtk.RESPONSE_OK:
+				self.add_dialog_path_entry.set_text(self.path_fileselector.get_filename())
+			self.path_fileselector.destroy()
+		elif button == self.edit_dialog_path_select:
+			self.path_fileselector = gtk.FileChooserDialog("Choose container", self.edit_dialog_window, gtk.FILE_CHOOSER_ACTION_OPEN, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+			self.path_fileselector.set_filename(self._path[0])
+			self.path_fileselector_response = self.path_fileselector.run()
+			if self.path_fileselector_response == gtk.RESPONSE_OK:
+				self.edit_dialog_path_entry.set_text(self.path_fileselector.get_filename())
+			self.path_fileselector.destroy()
 
 	def targetFileselector(self, button):
-		self.target_fileselector = gtk.FileChooserDialog("Choose target", None, gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
-		self.target_fileselector.set_filename(self._target[0])
-		self.target_fileselector_response = self.target_fileselector.run()
-		if self.target_fileselector_response == gtk.RESPONSE_OK:
-			self.edit_dialog_target_entry.set_text(self.target_fileselector.get_filename())
-		self.target_fileselector.destroy()
+		if button == self.add_dialog_target_select:
+			self.target_fileselector = gtk.FileChooserDialog("Choose target", self.add_dialog_window, gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+			self.target_fileselector_response = self.target_fileselector.run()
+			if self.target_fileselector_response == gtk.RESPONSE_OK:
+				self.add_dialog_target_entry.set_text(self.target_fileselector.get_filename())
+			self.target_fileselector.destroy()
+		elif button == self.edit_dialog_target_select:
+			self.target_fileselector = gtk.FileChooserDialog("Choose target", self.edit_dialog_window, gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+			self.target_fileselector.set_filename(self._target[0])
+			self.target_fileselector_response = self.target_fileselector.run()
+			if self.target_fileselector_response == gtk.RESPONSE_OK:
+				self.edit_dialog_target_entry.set_text(self.target_fileselector.get_filename())
+			self.target_fileselector.destroy()
 
 	def pwdDialog(self, wrong_pwd=False):
 		self._show_hide_counter = 2
