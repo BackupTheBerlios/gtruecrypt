@@ -154,7 +154,7 @@ containers: []\
         try:
             return self._containers[num].open(password, target, mount_options)
         except IndexError:
-            raise TrueException.ContainerNotFound('Not found') #FIXME
+            raise TrueException.ContainerNotFound("%s not found" % num)
 
     def close(self, num):
         self._containers[num].close()
@@ -193,6 +193,12 @@ class TrueCont (object):
         self.target = target
         self._status = self.frstStatus()
         self._error = ""
+    
+    def __debug(child):
+        raise TrueException.UnknownError("Unknown Error while creating!\
+            \ndump follows: %s" % child.__str__())
+        child.close()
+
 
     def create(self,voltype, size, fs, ha, ea):
         """
@@ -227,10 +233,7 @@ class TrueCont (object):
             self._status = tcerr.umounted
             return tcerr.created
         else:
-            print "DEBUGGING INFORMATION"
-            print 
-            print child
-            raise TrueException.UnknownError('Unknown Error while creating!')
+            self.__debug(child)
 
         randfile.close() # Remove the tempfile
 
@@ -302,12 +305,7 @@ class TrueCont (object):
             self._status = tcerr.allready_mounted
             return self._status
         else:
-            print "DEBUGGING INFORMATION"
-            print
-            print child
-            child.close()
-            raise TrueException.UnknownError
-
+            self.__debug(child)
     def close(self):
         """
         Unmounts the Container
@@ -315,7 +313,7 @@ class TrueCont (object):
         if not self.status == tcerr.mounted:
             return tcerr.umounted
 
-        command = "sudo truecrypt -d %s" % self.path
+        command = "truecrypt -d %s" % self.path
         child = pexpect.spawn(command)
         res = child.expect([
                 response.DISMOUNTING_SUCCESSFULL,
@@ -324,11 +322,7 @@ class TrueCont (object):
             self._status = tcerr.umounted
             return self._status
         else:
-            print "DEBUGGING INFORMATION"
-            print
-            print child
-            child.close()
-            raise TrueException.UnknownError
+            self.__debug(child)
 
     def __iter__(self):
         yield self.path
