@@ -57,7 +57,7 @@ class gTrueCrypt:
 		self.main_window = gtk.Window(gtk.WINDOW_TOPLEVEL)
 		self.main_window.set_title("gTrueCrypt")
 		self.main_window.set_icon(self._icon)
-		self.main_window.set_border_width(20)
+		self.main_window.set_border_width(5)
 		self.main_window.set_size_request(650, 200)
 		self.main_window.connect("delete_event", self.delete_event)
 		if tray == None:
