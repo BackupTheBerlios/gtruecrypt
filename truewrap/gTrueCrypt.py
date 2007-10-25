@@ -25,6 +25,7 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 import sys
+from truecrypt import *
 from optparse import OptionParser
 """Try to load the backend"""
 try:
@@ -32,10 +33,14 @@ try:
 except:
 	print "ERROR: Couldn't find backend!"
 	sys.exit()
+from optionFactory import *
 
-"""This is the main class of gTrueCrypt"""
 class gTrueCrypt:
 	def __init__(self, tray=None):
+		self.add_dialog_target_select=None
+		self.edit_dialog_target_select=None
+		self.add_dialog_path_select=None
+		self.edit_dialog_path_select=None
 		self._icon_path = os.path.join(os.path.dirname(__file__), "gTrueCrypt.png")
 		self._icon = gtk.gdk.pixbuf_new_from_file(self._icon_path)
 		"""Get list from backend"""
@@ -125,6 +130,7 @@ class gTrueCrypt:
 	def reloadList(self):
 		"""Stuff to reload the list"""
 		self.list.clear()
+		self.__container = self.TW.getList()
 		self.loadList()
 
 	def actionButtonChange(self, table):
@@ -167,7 +173,7 @@ class gTrueCrypt:
 		self.selection = self.table.get_selection()
 		self.model, self.iter = self.selection.get_selected()
 		if iter:
-            		try:
+			try:
 				self._number = self.list.get(self.iter, 0)
 				self._path = self.list.get(self.iter, 1)
 				self._target = self.list.get(self.iter, 2)
@@ -177,7 +183,7 @@ class gTrueCrypt:
 			self.editDialog()
 
 	def add(self, button):
-		self.add_dialog_counter = 1
+		self.mode = None
 		self.addDialog()
 
 	def editDialog(self, wrong_edit=False):
@@ -200,14 +206,20 @@ class gTrueCrypt:
 		self.edit_dialog_path_select.connect('clicked', self.pathFileselector)
 		self.edit_dialog_path_select.show()
 		self.edit_dialog_path_entry = gtk.Entry(max=0)
-		self.edit_dialog_path_entry.set_text(self._path[0])
+		try:
+			self.edit_dialog_path_entry.set_text(self._path[0])
+		except:
+			self.edit_dialog_path_entry.set_text("")
 		self.edit_dialog_target_label = gtk.Label("Target")
 		self.edit_dialog_target_label.show()
 		self.edit_dialog_target_select = gtk.Button("...")
 		self.edit_dialog_target_select.connect('clicked', self.targetFileselector)
 		self.edit_dialog_target_select.show()
 		self.edit_dialog_target_entry = gtk.Entry(max=0)
-		self.edit_dialog_target_entry.set_text(self._target[0])
+		try:
+			self.edit_dialog_target_entry.set_text(self._target[0])
+		except:
+			self.edit_dialog_target_entry.set_text("")
 		self.edit_dialog_label.show()
 		self.edit_dialog_path_entry.show()
 		self.edit_dialog_layout.attach(self.edit_dialog_label, 0, 2, 0, 1)
@@ -222,10 +234,9 @@ class gTrueCrypt:
 		self.edit_dialog_window.connect("response", self.responseEditDialog)
 
 	def addDialog(self):
-		if self.add_dialog_counter == 1:
+		if self.mode == None:
 			self._show_hide_counter = 2
-			"""Stuff for the add-dialog"""
-			self.add_dialog_window = gtk.Dialog("Edit", self.main_window,
+			self.add_dialog_window = gtk.Dialog("Add", self.main_window,
 				gtk.DIALOG_NO_SEPARATOR,
             	("Cancel",  gtk.RESPONSE_CLOSE,
              	"Forward",         gtk.RESPONSE_OK))
@@ -233,53 +244,125 @@ class gTrueCrypt:
 			self.add_dialog_window.set_modal(True)
 			self.add_dialog_label = gtk.Label("Here you can add new containers to the list and create new ones.")
 			self.add_dialog_label.show()
-			self.add_dialog_add_radio = gtk.RadioButton(None, "Add existing container to he list")
-			self.add_dialog_add_radio.show()
-			self.add_dialog_create_radio = gtk.RadioButton(self.add_dialog_add_radio, "Create new container")
-			self.add_dialog_create_radio.show()
-			self.add_dialog_create_radio.set_active(True)
+			self.add_options = [
+								["new", "Create new container"],
+								["add", "Add existing container"]
+								]
+			self.add = optionFactory(None, self.add_options)
+			self.add.show()
 			self.add_dialog_window.vbox.pack_start(self.add_dialog_label, True, True, 0)
-			self.add_dialog_window.vbox.pack_start(self.add_dialog_create_radio, True, True, 0)
-			self.add_dialog_window.vbox.pack_start(self.add_dialog_add_radio, True, True, 0)
+			self.add_dialog_window.vbox.pack_start(self.add, True, True, 0)
 			self.add_dialog_window.show_all()
 			self.add_dialog_window.connect("response", self.responseAddDialog)
-		elif self.add_dialog_counter == 2:
-			if self.add_dialog_add_radio.get_active() == True:
-				self.add_dialog_label.set_text("Select a container! It will be added to the list...")
-				self.add_dialog_add_radio.destroy()
-				self.add_dialog_create_radio.destroy()
-				self.add_dialog_layout = gtk.Table(3, 2, False)
-				self.add_dialog_layout.set_row_spacings(2)
-				self.add_dialog_layout.set_col_spacings(2)
-				self.add_dialog_layout.show()
-				self.add_dialog_path_label = gtk.Label("Path to of the container you want to add")
-				self.add_dialog_path_label.show()
-				self.add_dialog_path_select = gtk.Button("...")
-				self.add_dialog_path_select.connect('clicked', self.pathFileselector)
-				self.add_dialog_path_select.show()
-				self.add_dialog_path_entry = gtk.Entry(max=0)
-				self.add_dialog_path_entry.show()
-				self.add_dialog_target_label = gtk.Label("Path you want to mount the container")
-				self.add_dialog_target_label.show()
-				self.add_dialog_target_select = gtk.Button("...")
-				self.add_dialog_target_select.connect('clicked', self.targetFileselector)
-				self.add_dialog_target_select.show()
-				self.add_dialog_target_entry = gtk.Entry(max=0)
-				self.add_dialog_label.show()
-				self.add_dialog_path_entry.show()
-				self.add_dialog_target_entry.show()
-  				self.add_dialog_layout.attach(self.add_dialog_path_label, 0, 1, 1, 2)
-  		  		self.add_dialog_layout.attach(self.add_dialog_path_entry, 1, 2, 1, 2)
-  		  		self.add_dialog_layout.attach(self.add_dialog_path_select, 2, 3, 1, 2)
-  		  		self.add_dialog_layout.attach(self.add_dialog_target_label, 0, 1, 2, 3)
-  		  		self.add_dialog_layout.attach(self.add_dialog_target_entry, 1, 2, 2, 3)
-  		  		self.add_dialog_layout.attach(self.add_dialog_target_select, 2, 3, 2, 3)
-		  		self.add_dialog_window.vbox.pack_start(self.add_dialog_layout, True, True, 0)
-			elif self.add_dialog_create_radio.get_active() == True:
-				self.add_dialog_label.set_text("Not implemented yet...")
-				self.add_dialog_add_radio.destroy()
-				self.add_dialog_create_radio.destroy()
-
+		elif self.mode == "add":
+			self.add_dialog_label.set_text("Select a container! It will be added to the list...")
+			self.add.destroy()
+			self.add_dialog_layout = gtk.Table(3, 2, False)
+			self.add_dialog_layout.set_row_spacings(2)
+			self.add_dialog_layout.set_col_spacings(2)
+			self.add_dialog_layout.show()
+			self.add_dialog_path_label = gtk.Label("Path to of the container you want to add")
+			self.add_dialog_path_label.show()
+			self.add_dialog_path_select = gtk.Button("...")
+			self.add_dialog_path_select.connect('clicked', self.pathFileselector)
+			self.add_dialog_path_select.show()
+			self.add_dialog_path_entry = gtk.Entry(max=0)
+			self.add_dialog_path_entry.show()
+			self.add_dialog_target_label = gtk.Label("Path you want to mount the container")
+			self.add_dialog_target_label.show()
+			self.add_dialog_target_select = gtk.Button("...")
+			self.add_dialog_target_select.connect('clicked', self.targetFileselector)
+			self.add_dialog_target_select.show()
+			self.add_dialog_target_entry = gtk.Entry(max=0)
+			self.add_dialog_label.show()
+			self.add_dialog_path_entry.show()
+			self.add_dialog_target_entry.show()
+  			self.add_dialog_layout.attach(self.add_dialog_path_label, 0, 1, 1, 2)
+  		  	self.add_dialog_layout.attach(self.add_dialog_path_entry, 1, 2, 1, 2)
+  		  	self.add_dialog_layout.attach(self.add_dialog_path_select, 2, 3, 1, 2)
+  		  	self.add_dialog_layout.attach(self.add_dialog_target_label, 0, 1, 2, 3)
+  		  	self.add_dialog_layout.attach(self.add_dialog_target_entry, 1, 2, 2, 3)
+  		  	self.add_dialog_layout.attach(self.add_dialog_target_select, 2, 3, 2, 3)
+		  	self.add_dialog_window.vbox.pack_start(self.add_dialog_layout, True, True, 0)
+		elif self.mode == "new":
+			self.add_dialog_label.set_text("Now you can create a container.\nThere are lots of options, but don't worry! You don't have to\nchange the preselected options...")
+			self.add.destroy()
+			self.general_table = gtk.Table(4, 3, False)
+			self.general = gtk.Frame("General settings")
+			self.general.add(self.general_table)
+			self.general_path_label = gtk.Label("Path for the container")
+			self.general_path_label.show()
+			self.general_path_select = gtk.Button("...")
+			self.general_path_select.connect('clicked', self.targetFileselector)
+			self.general_path_select.show()
+			self.general_path_entry = gtk.Entry(max=0)
+			self.general_path_entry.show()
+			self.general_table.attach(self.general_path_label, 0, 1, 0, 1)
+			self.general_table.attach(self.general_path_entry, 1, 2, 0, 1)
+			self.general_table.attach(self.general_path_select, 2, 3, 0, 1)
+			self.general_target_label = gtk.Label("Mountpoint")
+			self.general_target_label.show()
+			self.general_target_select = gtk.Button("...")
+			self.general_target_select.connect('clicked', self.targetFileselector)
+			self.general_target_select.show()
+			self.general_target_entry = gtk.Entry(max=0)
+			self.general_target_entry.show()
+			self.general_table.attach(self.general_target_label, 0, 1, 1, 2)
+			self.general_table.attach(self.general_target_entry, 1, 2, 1, 2)
+			self.general_table.attach(self.general_target_select, 2, 3, 1, 2)
+			self.general_size_label = gtk.Label("Size of the container (K/M/G; ie 10M)")
+			self.general_size_label.show()
+			self.general_size_entry = gtk.Entry(max=0)
+			self.general_size_entry.show()
+			self.general_table.attach(self.general_size_label, 0, 1, 2, 3)
+			self.general_table.attach(self.general_size_entry, 1, 2, 2, 3)
+			self.general_pwd_label = gtk.Label("Enter your password")
+			self.general_pwd_label.show()
+			self.general_pwd_entry = gtk.Entry(max=0)
+			self.general_pwd_entry.show()
+			self.general_table.attach(self.general_pwd_label, 0, 1, 3, 4)
+			self.general_table.attach(self.general_pwd_entry, 1, 2, 3, 4)
+			self.voltype_options = [
+								["normal", "Normal"],
+								["hidden", "Hidden"]
+								]
+			self.voltype = optionFactory("Volume type", self.voltype_options)
+			self.voltype.show()
+			self.filesystem_options = [
+								["fat", "FAT"],
+								["none", "None"]
+								]
+			self.filesystem = optionFactory("Filesystem", self.filesystem_options)
+			self.filesystem.show()
+			self.hash_options = [
+								["RIPEMD-160", "RIPEMD-160"],
+								["SHA-1", "SHA-1"]
+								]
+			self.hash = optionFactory("Hash algorithm", self.hash_options)
+			self.hash.show()
+			self.enc_options = [
+								["AES", "AES"],
+								["Blowfish", "Blowfish"],
+								["CAST5", "CAST5"],
+								["Serpent", "Serpent"],
+								["Triple DES", "Triple DES"],
+								["Twofish", "Twofish"],
+								["AES-Twofish", "AES-Twofish"],
+								["AES-Twofish-Serpent", "AES-Twofish-Serpent"],
+								["Serpent-AES", "Serpent-AES"],
+								["Serpent-Twofish-AES", "Serpent-Twofish-AES"],
+								["Twofish-Serpent", "Twofish-Serpent"]
+								]
+			self.enc = optionFactory("Encrypt algorithm", self.enc_options)
+			self.enc.show()
+			self.add_dialog_window.vbox.pack_start(self.general, True, True, 0)
+			self.add_dialog_window.vbox.pack_start(self.voltype, True, True, 0)
+			self.add_dialog_window.vbox.pack_start(self.filesystem, True, True, 0)
+			self.add_dialog_window.vbox.pack_start(self.hash, True, True, 0)
+			self.add_dialog_window.vbox.pack_start(self.enc, True, True, 0)
+			self.add_dialog_window.show_all()
+		else:
+			self.error("unknown")
 
 	def responseEditDialog(self, dialog, response_id):
 		if response_id == gtk.RESPONSE_OK:
@@ -293,12 +376,26 @@ class gTrueCrypt:
 
 	def responseAddDialog(self, dialog, response_id):
 		if response_id == gtk.RESPONSE_OK:
-			if self.add_dialog_add_radio.get_active() == True and self.add_dialog_counter == 2:
-				self.TW.setList(None, self.add_dialog_path_entry.get_text(), self.add_dialog_target_entry.get_text())
-				self.add_dialog_window.destroy()
+			if self.mode == "new":
+				path = self.general_path_entry.get_text()
+				target = self.general_path_target.get_text()
+				password = self.general_pwd_entry.get_text()
+				size = self.general_size_entry.get_text()
+				voltype = self.voltype.get_active()
+				ha = self.hash.get_active()
+				ea = self.enc.get_active()
+				fs = self.filesystem.get_active()
+				self.TW.create(path, password, voltype, size, fs, ha, ea)
+				dialog.destroy()
+				self.reloadList()
 				return
-			self.add_dialog_counter = self.add_dialog_counter + 1
-			self.addDialog()
+			elif self.mode == "add":
+				print "This feature is not implemented yet..."
+				dialog.destroy()
+				return
+			else:
+				self.mode = self.add.get_active()
+				self.addDialog()
 		else:
 			dialog.destroy()
 			self._show_hide_counter = 1
@@ -324,13 +421,25 @@ class gTrueCrypt:
 			self.target_fileselector_response = self.target_fileselector.run()
 			if self.target_fileselector_response == gtk.RESPONSE_OK:
 				self.add_dialog_target_entry.set_text(self.target_fileselector.get_filename())
-			self.target_fileselector.destroy()
+				self.target_fileselector.destroy()
 		elif button == self.edit_dialog_target_select:
 			self.target_fileselector = gtk.FileChooserDialog("Choose target", self.edit_dialog_window, gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
 			self.target_fileselector.set_filename(self._target[0])
 			self.target_fileselector_response = self.target_fileselector.run()
 			if self.target_fileselector_response == gtk.RESPONSE_OK:
 				self.edit_dialog_target_entry.set_text(self.target_fileselector.get_filename())
+			self.target_fileselector.destroy()
+		elif button == self.general_path_select:
+			self.target_fileselector = gtk.FileChooserDialog("Choose target", self.add_dialog_window, gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+			self.target_fileselector_response = self.target_fileselector.run()
+			if self.target_fileselector_response == gtk.RESPONSE_OK:
+				self.general_path_entry.set_text(self.target_fileselector.get_filename())
+			self.target_fileselector.destroy()
+		elif button == self.general_target_select:
+			self.target_fileselector = gtk.FileChooserDialog("Choose target", self.add_dialog_window, gtk.FILE_CHOOSER_ACTION_SELECT_FOLDER, (gtk.STOCK_CANCEL, gtk.RESPONSE_CANCEL, gtk.STOCK_OPEN, gtk.RESPONSE_OK))
+			self.target_fileselector_response = self.target_fileselector.run()
+			if self.target_fileselector_response == gtk.RESPONSE_OK:
+				self.general_target_entry.set_text(self.target_fileselector.get_filename())
 			self.target_fileselector.destroy()
 
 	def pwdDialog(self, wrong_pwd=False):
@@ -408,6 +517,9 @@ class gTrueCrypt:
 
 	def exit(self, button):
 		gtk.main_quit()
+
+	def error(self, message):
+		print message
 
 	def show_hide(self, button):
 		if self._show_hide_counter == 1:
