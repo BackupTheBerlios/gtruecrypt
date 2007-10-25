@@ -25,7 +25,7 @@ import pygtk
 pygtk.require('2.0')
 import gtk
 import sys
-from truecrypt import *
+from gtctable import *
 from optparse import OptionParser
 """Try to load the backend"""
 try:
@@ -34,6 +34,7 @@ except:
 	print "ERROR: Couldn't find backend!"
 	sys.exit()
 from optionFactory import *
+from language_en import *
 
 class gTrueCrypt:
 	def __init__(self, tray=None):
@@ -234,12 +235,14 @@ class gTrueCrypt:
 		self.edit_dialog_window.connect("response", self.responseEditDialog)
 
 	def addDialog(self):
+		print self.mode
 		if self.mode == None:
 			self._show_hide_counter = 2
 			self.add_dialog_window = gtk.Dialog("Add", self.main_window,
 				gtk.DIALOG_NO_SEPARATOR,
             	("Cancel",  gtk.RESPONSE_CLOSE,
              	"Forward",         gtk.RESPONSE_OK))
+			self.add_dialog_window.resize(500, 1)
 			self.add_dialog_window.set_border_width(5)
 			self.add_dialog_window.set_modal(True)
 			self.add_dialog_label = gtk.Label("Here you can add new containers to the list and create new ones.")
@@ -257,6 +260,8 @@ class gTrueCrypt:
 		elif self.mode == "add":
 			self.add_dialog_label.set_text("Select a container! It will be added to the list...")
 			self.add.destroy()
+			self.add_dialog_window.resize(500, 1)
+			self.add_dialog_window.set_default_size(0,0)
 			self.add_dialog_layout = gtk.Table(3, 2, False)
 			self.add_dialog_layout.set_row_spacings(2)
 			self.add_dialog_layout.set_col_spacings(2)
@@ -284,10 +289,11 @@ class gTrueCrypt:
   		  	self.add_dialog_layout.attach(self.add_dialog_target_entry, 1, 2, 2, 3)
   		  	self.add_dialog_layout.attach(self.add_dialog_target_select, 2, 3, 2, 3)
 		  	self.add_dialog_window.vbox.pack_start(self.add_dialog_layout, True, True, 0)
-		elif self.mode == "new":
-			self.add_dialog_label.set_text("Now you can create a container.\nThere are lots of options, but don't worry! You don't have to\nchange the preselected options...")
+		elif self.mode == "new_general":
 			self.add.destroy()
-			self.general_table = gtk.Table(4, 3, False)
+			self.add_dialog_label.destroy()
+			self.add_dialog_window.set_default_size(500,1)
+			self.general_table = Table(4, 3, False)
 			self.general = gtk.Frame("General settings")
 			self.general.add(self.general_table)
 			self.general_path_label = gtk.Label("Path for the container")
@@ -322,24 +328,23 @@ class gTrueCrypt:
 			self.general_pwd_entry.show()
 			self.general_table.attach(self.general_pwd_label, 0, 1, 3, 4)
 			self.general_table.attach(self.general_pwd_entry, 1, 2, 3, 4)
+			self.general_path_entry.show()
+			self.general_table.show()
 			self.voltype_options = [
 								["normal", "Normal"],
 								["hidden", "Hidden"]
 								]
 			self.voltype = optionFactory("Volume type", self.voltype_options)
-			self.voltype.show()
 			self.filesystem_options = [
 								["fat", "FAT"],
 								["none", "None"]
 								]
 			self.filesystem = optionFactory("Filesystem", self.filesystem_options)
-			self.filesystem.show()
 			self.hash_options = [
 								["RIPEMD-160", "RIPEMD-160"],
 								["SHA-1", "SHA-1"]
 								]
 			self.hash = optionFactory("Hash algorithm", self.hash_options)
-			self.hash.show()
 			self.enc_options = [
 								["AES", "AES"],
 								["Blowfish", "Blowfish"],
@@ -354,15 +359,65 @@ class gTrueCrypt:
 								["Twofish-Serpent", "Twofish-Serpent"]
 								]
 			self.enc = optionFactory("Encrypt algorithm", self.enc_options)
+			self.general.show()
+			self.help_expander = gtk.expander_new_with_mnemonic("Help")
+			self.help_expander.show()
+			self.help_expander.connect("activate", self.expand)
+			self.content = gtk.VBox()
+			self.content.show()
+			self.add_dialog_window.vbox.pack_start(self.content, True, True, 0)
+			self.add_dialog_window.vbox.pack_start(self.help_expander, True, True, 0)
+			self.content.pack_start(self.general, True, True, 0)
+		elif self.mode == "new_voltype":
+			self.general.destroy()
+			self.add_dialog_window.resize(500, 1)
+			self.content.pack_start(self.voltype, True, True, 0)
+			self.voltype.show()
+		elif self.mode == "new_filesystem":
+			self.voltype.destroy()
+			self.add_dialog_window.resize(500, 1)
+			self.add_dialog_window.set_default_size(0,0)
+			self.content.pack_start(self.filesystem, True, True, 0)
+			self.filesystem.show()
+		elif self.mode == "new_hash":
+			self.filesystem.destroy()
+			self.add_dialog_window.resize(500, 1)
+			self.add_dialog_window.set_default_size(0,0)
+			self.content.pack_start(self.hash, True, True, 0)
+			self.hash.show()
+		elif self.mode == "new_enc":
+			self.hash.destroy()
+			self.add_dialog_window.resize(500, 1)
+			self.add_dialog_window.set_default_size(0,0)
+			self.content.pack_start(self.enc, True, True, 0)
 			self.enc.show()
-			self.add_dialog_window.vbox.pack_start(self.general, True, True, 0)
-			self.add_dialog_window.vbox.pack_start(self.voltype, True, True, 0)
-			self.add_dialog_window.vbox.pack_start(self.filesystem, True, True, 0)
-			self.add_dialog_window.vbox.pack_start(self.hash, True, True, 0)
-			self.add_dialog_window.vbox.pack_start(self.enc, True, True, 0)
-			self.add_dialog_window.show_all()
 		else:
 			self.error("unknown")
+
+	def expand(self, expander):
+		if expander.get_expanded() == False:
+			self.help_box = gtk.ScrolledWindow()
+			self.help_box.set_policy(gtk.POLICY_AUTOMATIC, gtk.POLICY_AUTOMATIC)
+			self.help_box.show()
+			print "help_"+self.mode
+			self.help_label = gtk.Label(language_en["help_"+self.mode])
+			self.help_label.show()
+			self.help_alignment = gtk.Alignment(xalign=0.0, yalign=0.0, xscale=0.0, yscale=0.0)
+			self.help_box.add_with_viewport(self.help_alignment)
+			self.help_alignment.add(self.help_label)
+			self.help_alignment.show()
+			self.help_expander.add(self.help_box)
+
+		if expander.get_expanded() == True:
+			expander.destroy()
+
+			self.add_dialog_window.resize(500, 1)
+			self.add_dialog_window.set_default_size(0,0)
+			self.help_expander = gtk.expander_new_with_mnemonic("Help")
+			self.help_expander.show()
+			self.help_expander.connect("activate", self.expand)
+			self.add_dialog_window.vbox.pack_start(self.help_expander, True, True, 0)
+			return
 
 	def responseEditDialog(self, dialog, response_id):
 		if response_id == gtk.RESPONSE_OK:
@@ -376,9 +431,29 @@ class gTrueCrypt:
 
 	def responseAddDialog(self, dialog, response_id):
 		if response_id == gtk.RESPONSE_OK:
-			if self.mode == "new":
+			if self.mode == "new_general":
+				self.mode = "new_voltype"
+				self.help_expander.set_expanded(True)
+				self.expand(self.help_expander)
+				self.addDialog()
+			elif self.mode == "new_voltype":
+				self.mode = "new_filesystem"
+				self.help_expander.set_expanded(True)
+				self.expand(self.help_expander)
+				self.addDialog()
+			elif self.mode == "new_filesystem":
+				self.mode = "new_hash"
+				self.help_expander.set_expanded(True)
+				self.expand(self.help_expander)
+				self.addDialog()
+			elif self.mode == "new_hash":
+				self.mode = "new_enc"
+				self.help_expander.set_expanded(True)
+				self.expand(self.help_expander)
+				self.addDialog()
+			elif self.mode == "new_enc":
 				path = self.general_path_entry.get_text()
-				target = self.general_path_target.get_text()
+				target = self.general_target_entry.get_text()
 				password = self.general_pwd_entry.get_text()
 				size = self.general_size_entry.get_text()
 				voltype = self.voltype.get_active()
@@ -394,7 +469,10 @@ class gTrueCrypt:
 				dialog.destroy()
 				return
 			else:
-				self.mode = self.add.get_active()
+				if self.add.get_active() == "new":
+					self.mode = "new_general"
+				elif self.add.get_active() == "add":
+					 self.mode = "add"
 				self.addDialog()
 		else:
 			dialog.destroy()
@@ -451,7 +529,7 @@ class gTrueCrypt:
              "OK",         gtk.RESPONSE_OK))
 		self.pwd_dialog_window.set_border_width(5)
 		self.pwd_dialog_window.set_modal(True)
-		self.pwd_dialog_layout = gtk.Table(3, 2, True)
+		self.pwd_dialog_layout = Table(3, 2, True)
 		self.pwd_dialog_layout.set_row_spacings(2)
 		self.pwd_dialog_layout.set_col_spacings(2)
 		self.pwd_dialog_layout.show()

@@ -1,10 +1,10 @@
-#!/usr/bin/python 
+#!/usr/bin/python
 #
-#      truecrypt.py - truecrypt wrapper libary
+#	  truecrypt.py - truecrypt wrapper libary
 #
-#   author:      Jens Kadenbach
+#   author:	  Jens Kadenbach
 #   copyright:   2007 by Jens Kadenbach
-#   license:     GNU General Public License, version 2 only
+#   license:	 GNU General Public License, version 2 only
 #
 #
 #  This program is free software. It's allowed to modify and/or redistribute
@@ -17,7 +17,7 @@
 #  but WITHOUT ANY WARRANTY; without even the implied warranty of
 #  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 #  GNU General Public License for more details.
-# 
+#
 
 
 import os
@@ -34,341 +34,345 @@ from other import which
 #TODO Add more filesystems for creation
 
 class TrueCrypt (object):
-    """Wrapper class to access TrueCrypt functions and to store and load options"""
-    def __init__(self, preferences=None):
-        """_containers is a list of TrueCont Objects"""
-        if not self.findBinary():
-            raise TrueException.TrueCryptNotFound
-        self.__version__ = "0.2-alpha"
-        self.__pref_path = self.loadPrefPath(preferences)
-        self.__pref = self.loadPreferences()
-        self._containers = []
-        self.loadContainers()
+	"""Wrapper class to access TrueCrypt functions and to store and load options"""
+	def __init__(self, preferences=None):
+		"""_containers is a list of TrueCont Objects"""
+		if not self.findBinary():
+			raise TrueException.TrueCryptNotFound
+		self.__version__ = "0.2-alpha"
+		self.__pref_path = self.loadPrefPath(preferences)
+		self.__pref = self.loadPreferences()
+		self._containers = []
+		self.loadContainers()
 
-    def loadPreferences(self):
-        """Load the preferences or create a new default file"""
-        try:
-            f = file(self.__pref_path)
-            data = yaml.safe_load(f)
-        except IOError:
-            return self.exceptFunc()
-        return data
+	def loadPreferences(self):
+		"""Load the preferences or create a new default file"""
+		try:
+			f = file(self.__pref_path)
+			data = yaml.safe_load(f)
+		except IOError:
+			return self.exceptFunc()
+		return data
 
-    def loadContainers(self):
-        """Load the containers described in the yaml document self.__pref"""
-        list = []
-        containers = self.__pref['containers']
-        if not containers:
-            return list
-        for c in containers:
-            path = c['path']
-            targ = c['target']
-            self.open(path, target=targ)
-        return list
+	def loadContainers(self):
+		"""Load the containers described in the yaml document self.__pref"""
+		list = []
+		containers = self.__pref['containers']
+		if not containers:
+			return list
+		for c in containers:
+			path = c['path']
+			targ = c['target']
+			self.open(path, target=targ)
+		return list
 
-    def addtoyaml(self, num):
-        """Add to the options"""
-        c = iter(self._containers[num])
-        path = c.next()
-        target = c.next()
-        containers = self.__pref['containers']
-        dict = {'path': path, 'target': target}
-        if dict in containers: return False # Dont write in in twice!
-        containers.append(dict)
+	def addtoyaml(self, num):
+		"def getList(self):""Add to the options"""
+		c = iter(self._containers[num])
+		path = c.next()
+		target = c.next()
+		containers = self.__pref['containers']
+		dict = {'path': path, 'target': target}
+		if dict in containers: return False # Dont write in in twice!
+		containers.append(dict)
 
-    def save(self):
-        """Refresh and save the prefences"""
-        
-        f = file(self.__pref_path, 'w')
-        f.write(yaml.dump(self.__pref))
-        f.close()
+	def save(self):
+		"""Refresh and save the prefences"""
 
-    def umountall(self):
-        for c in self.getList():
-            self.close(c[0])
+		f = file(self.__pref_path, 'w')
+		f.write(yaml.dump(self.__pref))
+		f.close()
 
-    def exit(self):
-        self.save()
-        self.umountall()
+	def umountall(self):
+		for c in self.getList():
+			self.close(c[0])
 
-    def exceptFunc(self):
-        """Create a default config"""
-        default="""\
+	def exit(self):
+		self.save()
+		self.umountall()
+
+	def exceptFunc(self):
+		"""Create a default config"""
+		default="""\
 containers: []\
-""" 
-        yamlfile = file(self.__pref_path, 'w')
-        yamlfile.write(default)
-        yamlfile.close()
-        yamlfile = file(self.__pref_path, 'r')
-        return yaml.safe_load(yamlfile)
+"""
+		yamlfile = file(self.__pref_path, 'w')
+		yamlfile.write(default)
+		yamlfile.close()
+		yamlfile = file(self.__pref_path, 'r')
+		return yaml.safe_load(yamlfile)
 
-    def loadPrefPath(self, preferences=None):
-        if not preferences:
-            path = os.environ['HOME'] + "/.gtruecrypt"
-            if not os.path.isdir(path):
-                os.makedirs(path)
-            path += "/saved_containers"
-            return path
-        else:
-            return preferences
+	def loadPrefPath(self, preferences=None):
+		if not preferences:
+			path = os.environ['HOME'] + "/.gtruecrypt"
+			if not os.path.isdir(path):
+				os.makedirs(path)
+			path += "/saved_containers"
+			return path
+		else:
+			return preferences
 
-    def create(self, path, password, voltype, size, fs, ha, ea):
-        """
-        Create a TrueCont Object and let it create a real TrueCrypt-container
-        voltype normal or hidden
-        size    in bytes or like "10M", look in TrueCrypts manpage!
-        fs  fat or none # I will implement ext3 as soon as possible
-        ha  Hash algorithm 
-        ea  Encryption algorithm
+	def create(self, path, password, voltype, size, fs, ha, ea):
+		"""
+		Create a TrueCont Object and let it create a real TrueCrypt-container
+		voltype normal or hidden
+		size	in bytes or like "10M", look in TrueCrypts manpage!
+		fs  fat or none # I will implement ext3 as soon as possible
+		ha  Hash algorithm
+		ea  Encryption algorithm
 
-        returns __str__ of TrueCont Object
-        """
-        if not self.isDouble(path):
-            cont = TrueCont(path, password)
-            cont.create(voltype, size, fs, ha, ea)
-            self._containers += [cont]
-            self.addtoyaml(self._containers.index(cont))
-            return str(cont)
-        else:
-            return False
+		returns __str__ of TrueCont Object
+		"""
+		if not self.isDouble(path):
+			cont = TrueCont(path, password)
+			print cont.create(voltype, size, fs, ha, ea)
+			self._containers += [cont]
+			self.addtoyaml(self._containers.index(cont))
+			print self._containers.index(cont)
+			self.save()
+			return str(cont)
+		else:
+			return False
+	def setList(self, number, path, target):
+		print "not implemented yet..."
 
-    def getList(self):
-        """
-        Returns a list of tuples with (Number of container, (path, target, status, error))
-        """
-        list = []
-        cnt = -1
-        for c in self._containers:
-            cnt += 1
-            cont = iter(c) # Iterate through containers atributes
-            list += [(cnt, (cont.next(), cont.next(), cont.next(), cont.next()))]
-        return list
+	def getList(self):
+		"""
+		Returns a list of tuples with (Number of container, (path, target, status, error))
+		"""
+		list = []
+		cnt = -1
+		for c in self._containers:
+			cnt += 1
+			cont = iter(c) # Iterate through containers atributes
+			list += [(cnt, (cont.next(), cont.next(), cont.next(), cont.next()))]
+		return list
 
-    def mount(self, num, target=None, password=None, mount_options=None):
-        """
-        mount the TrueCont to given target
+	def mount(self, num, target=None, password=None, mount_options=None):
+		"""
+		mount the TrueCont to given target
 
-        num (int) - Number of a TrueCont Object in the self._containers list
-        target (str) - Target directory
-        """
-        try:
-            return self._containers[num].open(password, target, mount_options)
-        except IndexError:
-            raise TrueException.ContainerNotFound("%s not found" % num)
+		num (int) - Number of a TrueCont Object in the self._containers list
+		target (str) - Target directory
+		"""
+		try:
+			return self._containers[num].open(password, target, mount_options)
+		except IndexError:
+			raise TrueException.ContainerNotFound("%s not found" % num)
 
-    def close(self, num):
-        self._containers[num].close()
+	def close(self, num):
+		self._containers[num].close()
 
-    def isDouble(self, path):
-        paths = set()
-        for c in self._containers:
-            paths.add(c.path)
-        if not path in paths:
-            return 0
-        else:
-            return 1
+	def isDouble(self, path):
+		paths = set()
+		for c in self._containers:
+			paths.add(c.path)
+		if not path in paths:
+			return 0
+		else:
+			return 1
 
-    def open(self, path, password=None, target=None):
-        if not self.isDouble(path):
-           cont = TrueCont(path, password, target)
-           self._containers += [cont]
-           self.addtoyaml(self._containers.index(cont))
+	def open(self, path, password=None, target=None):
+		if not self.isDouble(path):
+		   cont = TrueCont(path, password, target)
+		   self._containers += [cont]
+		   self.addtoyaml(self._containers.index(cont))
 
-    def findBinary(self):
-        try:
-            path =  which.which('truecrypt')
-            return True
-        except which.WhichError:
-            return False
-#        for path in  os.defpath.split(':')[1:]:
-#            path.join('truecrypt')
-#            if os.path.isfile(path):
-#                return True
-#        return True
+	def findBinary(self):
+		try:
+			path =  which.which('truecrypt')
+			return True
+		except which.WhichError:
+			return False
+#		for path in  os.defpath.split(':')[1:]:
+#			path.join('truecrypt')
+#			if os.path.isfile(path):
+#				return True
+#		return True
 
 class TrueCont (object):
-    def __init__(self, path, password = None, target=None):
-        self.path = path
-        self.password = password
-        self.target = target
-        self._status = self.frstStatus()
-        self._error = ""
-    
-    def __debug(child):
-        raise TrueException.UnknownError("Unknown Error while creating!\
-            \ndump follows: %s" % child.__str__())
-        child.close()
+	def __init__(self, path, password = None, target=None):
+		self.path = path
+		self.password = password
+		self.target = target
+		self._status = self.frstStatus()
+		self._error = ""
+
+	def __debug(child):
+		raise TrueException.UnknownError("Unknown Error while creating!\
+			\ndump follows: %s" % child.__str__())
+		child.close()
 
 
-    def create(self,voltype, size, fs, ha, ea):
-        """
-        voltype normal or hidden
-        size    in bytes or like "10M", look in TrueCrypts Manpage!
-        fs  fat or none # I will implement ext3 as soon as possible
-        ha  Hash algorithm 
-        ea  Encryption algorithm
-        """
-        if not voltype in ["normal", "hidden"]:
-            return tcerr.voltype
-        if not fs in ["fat", "none"]:
-            return tcerr.filesystem
-        import string
-        from random import choice
+	def create(self,voltype, size, fs, ha, ea):
+		"""
+		voltype normal or hidden
+		size	in bytes or like "10M", look in TrueCrypts Manpage!
+		fs  fat or none # I will implement ext3 as soon as possible
+		ha  Hash algorithm
+		ea  Encryption algorithm
+		"""
+		if not voltype in ["normal", "hidden"]:
+			return tcerr.voltype
+		if not fs in ["fat", "none"]:
+			return tcerr.filesystem
+		import string
+		from random import choice
 
-        # Create a file in /tmp with 320 random ASCI chars to give truecrypt random input
-        chars = string.letters + string.digits
-        random = "".join([choice(chars) for c in xrange(320)])
-        randfile = tempfile.NamedTemporaryFile()
-        randfile.write(random)
-        # File created
-        self.size = size
-        command = "truecrypt -u -p %s  --size %s --type %s --encryption %s --hash %s --filesystem %s --keyfile '' --overwrite --random-source %s -c %s" % (self.password, self.size, voltype, ea, ha, fs, randfile.name, self.path)
-        child = pexpect.spawn(command)
-        res = child.expect(
-            [response.VOLUME_CREATED,
-            response.EOF],
-            timeout=10)
+		# Create a file in /tmp with 320 random ASCI chars to give truecrypt random input
+		chars = string.letters + string.digits
+		random = "".join([choice(chars) for c in xrange(320)])
+		randfile = tempfile.NamedTemporaryFile()
+		randfile.write(random)
+		randfile.flush()
+		# File created
+		self.size = size
+		command = "truecrypt -u -p %s  --size %s --type %s --encryption %s --hash %s --filesystem %s --keyfile '' --overwrite --random-source %s -c %s" % (self.password, self.size, voltype, ea, ha, fs, randfile.name, self.path)
+		child = pexpect.spawn(command)
+		res = child.expect(
+			[response.VOLUME_CREATED,
+			response.EOF],
+			timeout=10)
 
-        if res in [0 ,1]:
-            self._status = tcerr.umounted
-            return tcerr.created
-        else:
-            self.__debug(child)
+		if res in [0 ,1]:
+			self._status = tcerr.umounted
+			return tcerr.created
+		else:
+			self.__debug(child)
 
-        randfile.close() # Remove the tempfile
+		#randfile.close() # Remove the tempfile
 
-    def getMapped(self):
-        """Will Return a nice Tuple of mapped TrueCrypt objects"""
-        mapped = commands.getoutput("truecrypt --list")
-        return mapped
+	def getMapped(self):
+		"""Will Return a nice Tuple of mapped TrueCrypt objects"""
+		mapped = commands.getoutput("truecrypt --list")
+		return mapped
 
-    def frstStatus(self):
-        if os.path.isfile(self.path):
-            self.mapped_result = self.getMapped()
-            res = re.search(" "+self.path, self.mapped_result)
-            res2 = re.search(" "+self.path+'.', self.mapped_result)
-            if res == None:
-            	return tcerr.umounted
-            else:
-            	if res2 == None:
-            		return tcerr.mounted
-            	return tcerr.umounted
-        elif not os.path.isfile(self.path):
-            return tcerr.not_found
-        else:
-            return tcerr.unknown_error
+	def frstStatus(self):
+		if os.path.isfile(self.path):
+			self.mapped_result = self.getMapped()
+			res = re.search(" "+self.path, self.mapped_result)
+			res2 = re.search(" "+self.path+'.', self.mapped_result)
+			if res == None:
+				return tcerr.umounted
+			else:
+				if res2 == None:
+					return tcerr.mounted
+				return tcerr.umounted
+		elif not os.path.isfile(self.path):
+			return tcerr.not_found
+		else:
+			return tcerr.unknown_error
 
-    def open(self, password=None, target=None, mount_options=None,
-    ): 
-        """
-        Mounts the Container to <target> and will create the target directory if able
-        """
-        if password:
-            self.password = password
-        if not self.password:
-            self._error = tcerr.missing_password
-            return self._error
-        if target:
-            self.target = target
-        if not self.target:
-            self._error = tcerr.no_target
-            return self._error
-        if not os.path.isdir(target):
-            try:
-                os.makedirs(self.target)
-            except:
-                self._error = tcerr.cannot_create_dir
-                return self._error
-        if not os.path.isfile(self.path):
-            self._error = tcerr.not_found
-            return self._error
-        command = "truecrypt -u %s %s -p %s" % (self.path, target, self.password)
-        if mount_options: command.join("-M %s" % mount_options)
+	def open(self, password=None, target=None, mount_options=None,
+	):
+		"""
+		Mounts the Container to <target> and will create the target directory if able
+		"""
+		if password:
+			self.password = password
+		if not self.password:
+			self._error = tcerr.missing_password
+			return self._error
+		if target:
+			self.target = target
+		if not self.target:
+			self._error = tcerr.no_target
+			return self._error
+		if not os.path.isdir(target):
+			try:
+				os.makedirs(self.target)
+			except:
+				self._error = tcerr.cannot_create_dir
+				return self._error
+		if not os.path.isfile(self.path):
+			self._error = tcerr.not_found
+			return self._error
+		command = "truecrypt -u %s %s -p %s" % (self.path, target, self.password)
+		if mount_options: command.join("-M %s" % mount_options)
+		child = pexpect.spawn(command)
+		res = child.expect([
+				response.INCORRECT_VOLUME,
+				response.VOLUME_MOUNTED,
+				pexpect.EOF,
+				response.ALREADY_MAPPED],
+				timeout=10)
+		"""
+		added: wrong_password-stuff...
+		"""
+		if res == 0:
+			self._error = tcerr.wrong_password
+			return self._error
+		elif res in [1, 2]:
+			self._status = tcerr.mounted
+			return self._status
+		elif res == 3:
+			self._status = tcerr.allready_mounted
+			return self._status
+		else:
+			self.__debug(child)
+	def close(self):
+		"""
+		Unmounts the Container
+		"""
+		if not self._status == tcerr.mounted:
+			return tcerr.umounted
 
-        child = pexpect.spawn(command)
-        res = child.expect([
-                response.INCORRECT_VOLUME,
-                response.VOLUME_MOUNTED,
-                pexpect.EOF,
-                response.ALREADY_MAPPED],
-                timeout=10)
-        """
-        added: wrong_password-stuff...
-        """
-        if res == 0:
-            self._error = tcerr.wrong_password
-            return self._error
-        elif res in [1, 2]:
-            self._status = tcerr.mounted
-            return self._status
-        elif res == 3:
-            self._status = tcerr.allready_mounted
-            return self._status
-        else:
-            self.__debug(child)
-    def close(self):
-        """
-        Unmounts the Container
-        """
-        if not self.status == tcerr.mounted:
-            return tcerr.umounted
+		command = "truecrypt -d %s" % self.path
+		child = pexpect.spawn(command)
+		res = child.expect([
+				response.DISMOUNTING_SUCCESSFULL,
+				pexpect.EOF], timeout=10)
+		if res in [1, 2]:
+			self._status = tcerr.umounted
+			return self._status
+		else:
+			self.__debug(child)
 
-        command = "truecrypt -d %s" % self.path
-        child = pexpect.spawn(command)
-        res = child.expect([
-                response.DISMOUNTING_SUCCESSFULL,
-                pexpect.EOF], timeout=10)
-        if res in [1, 2]:
-            self._status = tcerr.umounted
-            return self._status
-        else:
-            self.__debug(child)
+	def __iter__(self):
+		yield self.path
+		yield self.target
+		yield self._status
+		yield self._error
 
-    def __iter__(self):
-        yield self.path
-        yield self.target
-        yield self._status
-        yield self._error
-
-    def __str__(self):
-        """
-        Returns a string with "path size target"
-        When there is no target or size, it will not be in the string.
-        """
-        string = ""
-        string += self.path
-        if hasattr(self, "size"): string += " " + self.size + " "
-        if self.target: string += self.target
-        return str(path)
+	def __str__(self):
+		"""
+		Returns a string with "path size target"
+		When there is no target or size, it will not be in the string.
+		"""
+		string = ""
+		string += self.path
+		if hasattr(self, "size"): string += " " + self.size + " "
+		if self.target: string += self.target
+		return str(self.path)
 
 class TrueException(Exception):
-    """Error Class"""
-    class TrueCryptNotFound(Exception):
-        pass
-    class PriviligeError(Exception):
-        pass
-    class UnknownError(Exception):
-        pass
-    class AllreadyMounted(Exception):
-        pass
-    class ContainerNotFound(Exception):
-        pass
+	"""Error Class"""
+	class TrueCryptNotFound(Exception):
+		pass
+	class PriviligeError(Exception):
+		pass
+	class UnknownError(Exception):
+		pass
+	class AllreadyMounted(Exception):
+		pass
+	class ContainerNotFound(Exception):
+		pass
 
 
 if __name__ == "__main__":
-    path = "/home/dax/test1.tc"
-    target = "/tmp/tc2"
-    passwd = "test"
-    size = "10M"
-    voltype = "normal"
-    ha = "SHA-1"
-    ea = "AES"
-    fs = "fat"
+	path = "/home/dax/test1.tc"
+	target = "/tmp/tc2"
+	passwd = "test"
+	size = "10M"
+	voltype = "normal"
+	ha = "SHA-1"
+	ea = "AES"
+	fs = "fat"
 
-    t = TrueCrypt()
-    print t.getList()
-    t.mount(0, target, passwd)
-    print t.getList()
-    t.close(0)
-    print t.getList()
-    t.save()
+	t = TrueCrypt()
+	print t.getList()
+	t.mount(0, target, passwd)
+	print t.getList()
+	t.close(0)
+	print t.getList()
+	t.save()
