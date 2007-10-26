@@ -3,6 +3,7 @@
 
 
 import re
+ENTER_SYS_PASS = "Enter (.*)'s or root's system password"
 ENTER_PASSWORD= "Enter password.*\'.*\'"
 ENTER_HIDDEN_PASSWORD= "Enter hidden volume password.*"
 ENTER_PASSWORD_43A= "Enter.*or.*system password:"

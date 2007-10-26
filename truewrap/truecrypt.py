@@ -133,8 +133,20 @@ containers: []\
 			return str(cont)
 		else:
 			return False
-	def setList(self, number, path, target):
-		print "not implemented yet..."
+
+	def setList(self, num=None, path=None, target=None, password=None):
+		"""
+		Setting up allready made entries
+		"""
+		if not num:
+		    return self.open(self, path, target, password)
+		else:
+		    cont = self._containers[num]
+		    if path:    cont.path       = path
+		    if target:  cont.target     = target
+		    if password:cont.password   = password
+		    return cont
+
 
 	def getList(self):
 		"""
@@ -184,11 +196,6 @@ containers: []\
 			return True
 		except which.WhichError:
 			return False
-#		for path in  os.defpath.split(':')[1:]:
-#			path.join('truecrypt')
-#			if os.path.isfile(path):
-#				return True
-#		return True
 
 class TrueCont (object):
 	def __init__(self, path, password = None, target=None):
@@ -196,13 +203,12 @@ class TrueCont (object):
 		self.password = password
 		self.target = target
 		self._status = self.frstStatus()
-		self._error = ""
+		self._error = ''
 
 	def __debug(child):
 		raise TrueException.UnknownError("Unknown Error while creating!\
 			\ndump follows: %s" % child.__str__())
 		child.close()
-
 
 	def create(self,voltype, size, fs, ha, ea):
 		"""
@@ -249,6 +255,7 @@ class TrueCont (object):
 
 	def frstStatus(self):
 		if os.path.isfile(self.path):
+            # get the mapped containers
 			self.mapped_result = self.getMapped()
 			res = re.search(" "+self.path, self.mapped_result)
 			res2 = re.search(" "+self.path+'.', self.mapped_result)
@@ -263,8 +270,7 @@ class TrueCont (object):
 		else:
 			return tcerr.unknown_error
 
-	def open(self, password=None, target=None, mount_options=None,
-	):
+	def open(self, password=None, target=None, mount_options=None):
 		"""
 		Mounts the Container to <target> and will create the target directory if able
 		"""
@@ -294,7 +300,8 @@ class TrueCont (object):
 				response.INCORRECT_VOLUME,
 				response.VOLUME_MOUNTED,
 				pexpect.EOF,
-				response.ALREADY_MAPPED],
+				response.ALREADY_MAPPED,
+                response.ENTER_SYS_PASS],
 				timeout=10)
 		"""
 		added: wrong_password-stuff...
@@ -308,8 +315,12 @@ class TrueCont (object):
 		elif res == 3:
 			self._status = tcerr.allready_mounted
 			return self._status
+        	elif res == 4:
+            		raise TrueException.PrivilegeError
+            		return False
 		else:
-			self.__debug(child)
+			return self.__debug(child)
+
 	def close(self):
 		"""
 		Unmounts the Container
@@ -349,7 +360,7 @@ class TrueException(Exception):
 	"""Error Class"""
 	class TrueCryptNotFound(Exception):
 		pass
-	class PriviligeError(Exception):
+	class PrivilegeError(Exception):
 		pass
 	class UnknownError(Exception):
 		pass
