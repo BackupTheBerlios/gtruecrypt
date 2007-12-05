@@ -30,16 +30,24 @@ from optionFactory import *
 from language_de import *
 lang = language_de
 from optparse import OptionParser
-try:
-	from truecrypt import *
-except Exception, e:
-	print lang["error"]+": "+lang["couldntFindBackend"]
-	sys.exit()
+import dbus
 
 class gTrueCrypt:
 	def __init__(self, tray=None):
-		self.trueWrap = TrueCrypt()
-		self._containers = self.trueWrap.getList()
+		"""
+		dbus-stuff
+		"""
+		self._bus = dbus.SessionBus()
+		try:
+			self._daemon = self._bus.get_object("org.gtruecrypt.daemon",
+										"/gTCd")
+		except dbus.DBusException:
+			print "FATAL: Couldn't find backend on dbus."
+			print "Check if dbus is running and start the daemon!"
+			print
+			print_exc()
+			sys.exit(1)
+		self._containers = self._daemon.getList()
 		try:
 			self._icon_path = os.path.join(os.path.dirname(__file__), "gTrueCrypt.png")
 			self._icon = gtk.gdk.pixbuf_new_from_file(self._icon_path)
