@@ -108,8 +108,9 @@ containers: []\
 		return yaml.safe_load(yamlfile)
 
 	def loadPrefPath(self, preferences=None):
+		#TODO: We need !!! to have a session based system.
 		if not preferences:
-			path = os.environ['HOME'] + "/.gtruecrypt"
+			path = "/home/stein/.gtruecrypt"
 			if not os.path.isdir(path):
 				os.makedirs(path)
 			path += "/saved_containers"
@@ -166,6 +167,7 @@ containers: []\
 			list += [(int(cnt), (cont.next(), str(cont.next()), cont.next(), cont.next()))]
 		return list
 
+	@dbus.service.method("org.gtruecrypt.daemon.mountInterface")
 	def mount(self, num, target=None, password=None, mount_options=None):
 		"""
 		mount the TrueCont to given target
@@ -178,6 +180,8 @@ containers: []\
 		except IndexError:
 			raise TrueException.ContainerNotFound("%s not found" % num)
 
+	@dbus.service.method("org.gtruecrypt.daemon.closeInterface",
+						in_signature='i')
 	def close(self, num):
 		self._containers[num].close()
 
@@ -378,7 +382,7 @@ class TrueException(Exception):
 
 if __name__ == '__main__':
 	dbus.mainloop.glib.DBusGMainLoop(set_as_default=True)
-	session_bus = dbus.SessionBus()
+	session_bus = dbus.SystemBus()
 	name = dbus.service.BusName("org.gtruecrypt.daemon", session_bus)
 	object = gTCd(session_bus, '/gTCd')
 	mainloop = gobject.MainLoop()
