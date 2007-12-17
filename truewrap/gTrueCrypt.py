@@ -37,7 +37,7 @@ class gTrueCrypt:
 		"""
 		dbus-stuff
 		"""
-		self._bus = dbus.SessionBus()
+		self._bus = dbus.SystemBus()
 		try:
 			self._daemon = self._bus.get_object("org.gtruecrypt.daemon",
 										"/gTCd")
@@ -55,7 +55,7 @@ class gTrueCrypt:
 			print e
 			sys.exit()
 		self.trayIcon()
-		self.mainWindow = mainWindow(self._icon, self._containers)
+		self.mainWindow = mainWindow(self._icon, self._containers, self._daemon)
 
 	def trayIcon(self):
 		def trayMenu(icon, event_button, event_time):
@@ -75,7 +75,8 @@ class gTrueCrypt:
 		gtk.main_quit()
 
 class mainWindow(gtk.Window):
-	def __init__(self, icon, containers):
+	def __init__(self, icon, containers, daemon):
+		self._daemon = daemon
 		gtk.Window.__init__(self)
 		self._containers = containers
 		self.set_size_request(800, 270)
@@ -127,21 +128,66 @@ class mainWindow(gtk.Window):
 		self.treeView.append_column(self.column)
 		self.treeView.connect('cursor-changed', self.containerChange)
 	def containerChange(self, treeView):
+		#TODO: Add lang support
 		selection = self.treeView.get_selection()
 		model, iter = selection.get_selected()
-		try:
-			self.containerId = self.listStore.get(iter, 0)
-			self.containerPath = self.listStore.get(iter, 1)
-			self.containerTarget = self.listStore.get(iter, 2)
-			self.containerState = self.listStore.get(iter, 3)
+		def forward(button, mode):
+			if mode == "addExistingPath":
+				addExistingPath()
+		def eject(button):
+			self.res = self._daemon.close(int(self.listStore.get(iter, 0)[0]))
+		def mount(button):
+			self.res = self._daemon.mount(int(self.listStore.get(iter, 0)[0]), str(self.listStore.get(iter, 2)[0]), "ME182BT")
+		def mounted():
 			if self.__dict__.has_key("info"):
 				self.info.destroy()
 			self.info = gtk.Frame(self.containerPath[0])
 			self.infoBox.pack_start(self.info, True, True, 0)
 			self.info.show()
 			self.vBox = gtk.VBox()
+			self.vBox.show()
+			self.info.add(self.vBox)
+			#display current mountpoint
+			self.ejectButton = gtk.Button("eject")
+			self.ejectButton.connect("clicked", eject)
+			self.ejectButton.show()
+			self.buttonBox = gtk.HButtonBox()
+			self.buttonBox.set_border_width(8)
+			self.buttonBox.set_spacing(8)
+			self.buttonBox.set_layout(gtk.BUTTONBOX_END)
+			self.buttonBox.add(self.ejectButton)
+			self.buttonBox.show()
+			self.vBox.pack_end(self.buttonBox, False, False, 5)
+		def umounted():
+			if self.__dict__.has_key("info"):
+				self.info.destroy()
+			self.info = gtk.Frame(self.containerPath[0])
+			self.infoBox.pack_start(self.info, True, True, 0)
+			self.info.show()
+			self.vBox = gtk.VBox()
+			self.vBox.show()
+			self.info.add(self.vBox)
+			#display current mountpoint
+			self.mountButton = gtk.Button("mount")
+			self.mountButton.connect("clicked", mount)
+			self.mountButton.show()
+			self.buttonBox = gtk.HButtonBox()
+			self.buttonBox.set_border_width(8)
+			self.buttonBox.set_spacing(8)
+			self.buttonBox.set_layout(gtk.BUTTONBOX_END)
+			self.buttonBox.add(self.mountButton)
+			self.buttonBox.show()
+			self.vBox.pack_end(self.buttonBox, False, False, 5)
+		self.containerState = self.listStore.get(iter, 3)
+		self.containerPath = self.listStore.get(iter, 2)
+		if self.containerState[0] == "gtk-apply":
+			mounted()
+		elif self.containerState[0] == None:
+			umounted()
 
-			if self.containerState[0] == "gtk-apply":
+
+			"""
+
 				self.table = Table(4, 3, False)
 				targetLabel = gtk.Label(lang["target"]+":")
 				targetLabel.show()
@@ -225,7 +271,7 @@ class mainWindow(gtk.Window):
 				self.vBox.pack_start(self.table, False, False, 0)
 			self.vBox.show()
 			self.info.add(self.vBox)
-		except:
+			#except:
 			if self.__dict__.has_key("info"):
 				self.info.destroy()
 			self.info = gtk.Frame(lang['error'])
@@ -233,7 +279,7 @@ class mainWindow(gtk.Window):
 			self.info.show()
 			errorLabel = gtk.Label(lang['mainCouldNotGetContainerInfo'])
 			errorLabel.show()
-			self.info.add(errorLabel)
+			self.info.add(errorLabel)"""
 	def addContainer(self, button):
 		def forward(button, mode):
 			if mode == "addExistingPath":
